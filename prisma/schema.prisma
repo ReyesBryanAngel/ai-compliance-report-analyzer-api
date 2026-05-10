@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  reports   Report[]
+
+  @@map("users")
+}
+
+model Report {
+  id        String          @id @default(uuid())
+  title     String
+  content   String          @db.Text
+  status    ReportStatus    @default(PENDING)
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checks    ComplianceCheck[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@map("reports")
+}
+
+model ComplianceCheck {
+  id        String   @id @default(uuid())
+  reportId  String
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  rule      String
+  passed    Boolean
+  details   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@map("compliance_checks")
+}
+
+enum ReportStatus {
+  PENDING
+  ANALYZING
+  COMPLETED
+  FAILED
+}
+
+model Document {
+  id           String         @id @default(uuid())
+  originalName String
+  storedName   String
+  mimeType     String
+  size         Int
+  path         String
+  status       DocumentStatus @default(PENDING)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@map("documents")
+}
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}

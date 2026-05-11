@@ -3,6 +3,7 @@ import { getParser } from '../parser';
 import type { NormalizedTransaction } from '../parser/types';
 import { runRiskEngine, SUPPORTED_WORKFLOWS } from '../risk-engine';
 import type { WorkflowResult } from '../risk-engine/types';
+import { generateNarrative } from '../llm/service';
 import { loadSgThresholds } from '../thresholds/service';
 import type {
   GenerateReportBody,
@@ -175,11 +176,12 @@ export async function generateReport(
     }
 
     const summary = buildSummary(riskReport.workflows, documents.length, allTransactions.length);
+    const narrative = await generateNarrative(riskReport, summary);
 
     await prisma.report.update({
       where: { id: report.id },
       data: {
-        content: JSON.stringify({ summary, riskReport }),
+        content: JSON.stringify({ summary, riskReport, narrative }),
         status: 'COMPLETED',
       },
     });
@@ -193,6 +195,7 @@ export async function generateReport(
       results: riskReport.workflows,
       checks: savedChecks,
       summary,
+      narrative,
       createdAt: report.createdAt.toISOString(),
     };
   } catch (err) {
@@ -233,6 +236,7 @@ export async function getReport(
       details: c.details,
     })),
     summary: summary ?? buildSummary([], 0, 0),
+    narrative: parsed?.narrative ?? null,
     createdAt: report.createdAt.toISOString(),
   };
 }

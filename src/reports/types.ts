@@ -1,4 +1,7 @@
 import type { WorkflowResult } from '../risk-engine/types';
+import type { LLMNarrative } from '../llm/types';
+
+export type { LLMNarrative };
 
 export interface GenerateReportBody {
   workflows: string[];
@@ -31,6 +34,7 @@ export interface GenerateReportResponse {
   results: WorkflowResult[];
   checks: ReportCheckItem[];
   summary: ReportSummary;
+  narrative: LLMNarrative | null;
   createdAt: string;
 }
 

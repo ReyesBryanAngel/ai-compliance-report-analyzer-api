@@ -11,16 +11,25 @@ export const ALLOWED_MIME_TYPES = [
 
 export type AllowedMimeType = (typeof ALLOWED_MIME_TYPES)[number];
 
+export interface BatchInfo {
+  id: string;
+  name: string;
+  description: string | null;
+  createdAt: string;
+}
+
 export interface UploadedDocument {
   id: string;
   originalName: string;
   mimeType: string;
   size: number;
   status: string;
+  batchId: string | null;
   createdAt: string;
 }
 
 export interface UploadResponse {
+  batch: BatchInfo | null;
   documents: UploadedDocument[];
   failed: Array<{ filename: string; error: string }>;
 }

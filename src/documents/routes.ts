@@ -1,6 +1,12 @@
 import { FastifyPluginAsync } from 'fastify';
-import { ensureUploadDir, saveDocument } from './service';
-import type { UploadResponse, UploadedDocument } from './types';
+import { ensureUploadDir, saveDocument, parseDocument, createDocumentBatch } from './service';
+import type { UploadResponse, UploadedDocument, BatchInfo } from './types';
+import type { ParseResult } from '../parser';
+
+interface ListQuery {
+  batch_id?: string;
+  document_id?: string;
+}
 
 const documentRoutes: FastifyPluginAsync = async (server) => {
   await ensureUploadDir();
@@ -8,23 +14,35 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
   server.post<{ Reply: UploadResponse }>('/upload', {
     schema: {
       tags: ['Documents'],
-      summary: 'Upload one or more documents',
+      summary: 'Upload one or more documents, optionally grouped into a named batch',
+      description: 'Send `batch_name` (and optionally `batch_description`) as form fields **before** the file fields to group uploads into an identifiable batch.',
       consumes: ['multipart/form-data'],
       response: {
         200: {
           type: 'object',
           properties: {
+            batch: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                id:          { type: 'string' },
+                name:        { type: 'string' },
+                description: { type: 'string', nullable: true },
+                createdAt:   { type: 'string' },
+              },
+            },
             documents: {
               type: 'array',
               items: {
                 type: 'object',
                 properties: {
-                  id: { type: 'string' },
+                  id:           { type: 'string' },
                   originalName: { type: 'string' },
-                  mimeType: { type: 'string' },
-                  size: { type: 'number' },
-                  status: { type: 'string' },
-                  createdAt: { type: 'string' },
+                  mimeType:     { type: 'string' },
+                  size:         { type: 'number' },
+                  status:       { type: 'string' },
+                  batchId:      { type: 'string', nullable: true },
+                  createdAt:    { type: 'string' },
                 },
               },
             },
@@ -34,7 +52,7 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
                 type: 'object',
                 properties: {
                   filename: { type: 'string' },
-                  error: { type: 'string' },
+                  error:    { type: 'string' },
                 },
               },
             },
@@ -45,8 +63,17 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
   }, async (request, reply) => {
     const uploaded: UploadedDocument[] = [];
     const failed: UploadResponse['failed'] = [];
+    const fields: Record<string, string> = {};
 
-    for await (const part of request.files()) {
+    // Consume all parts immediately — file streams must not be left unread.
+    // Fields may arrive in any order relative to files, so batch creation
+    // happens after the loop once we know batch_name for sure.
+    for await (const part of request.parts()) {
+      if (part.type === 'field') {
+        fields[part.fieldname] = String(part.value);
+        continue;
+      }
+
       try {
         const doc = await saveDocument(part, server.prisma);
         uploaded.push(doc);
@@ -60,13 +87,39 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
       }
     }
 
-    return reply.send({ documents: uploaded, failed });
+    // Create batch and link documents after all parts are read
+    let batchRecord: BatchInfo | null = null;
+    if (fields['batch_name'] && uploaded.length > 0) {
+      batchRecord = await createDocumentBatch(
+        fields['batch_name'],
+        fields['batch_description'],
+        server.prisma,
+      );
+
+      await server.prisma.document.updateMany({
+        where: { id: { in: uploaded.map((d) => d.id) } },
+        data: { batchId: batchRecord.id },
+      });
+
+      for (const doc of uploaded) {
+        doc.batchId = batchRecord.id;
+      }
+    }
+
+    return reply.send({ batch: batchRecord, documents: uploaded, failed });
   });
 
-  server.get('/list', {
+  server.get<{ Querystring: ListQuery }>('/list', {
     schema: {
       tags: ['Documents'],
-      summary: 'List all uploaded documents',
+      summary: 'List documents, optionally filtered by batch ID or document ID',
+      querystring: {
+        type: 'object',
+        properties: {
+          batch_id:    { type: 'string', description: 'Filter by batch ID' },
+          document_id: { type: 'string', description: 'Filter by document ID' },
+        },
+      },
       response: {
         200: {
           type: 'object',
@@ -76,12 +129,13 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
               items: {
                 type: 'object',
                 properties: {
-                  id: { type: 'string' },
+                  id:           { type: 'string' },
                   originalName: { type: 'string' },
-                  mimeType: { type: 'string' },
-                  size: { type: 'number' },
-                  status: { type: 'string' },
-                  createdAt: { type: 'string' },
+                  mimeType:     { type: 'string' },
+                  size:         { type: 'number' },
+                  status:       { type: 'string' },
+                  batchId:      { type: 'string', nullable: true },
+                  createdAt:    { type: 'string' },
                 },
               },
             },
@@ -89,8 +143,15 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
         },
       },
     },
-  }, async (_request, reply) => {
+  }, async (request, reply) => {
+    const { batch_id, document_id } = request.query;
+
+    const where: Record<string, unknown> = {};
+    if (batch_id) where.batchId = batch_id;
+    if (document_id) where.id = document_id;
+
     const documents = await server.prisma.document.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -98,6 +159,7 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
         mimeType: true,
         size: true,
         status: true,
+        batchId: true,
         createdAt: true,
       },
     });
@@ -120,12 +182,13 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
         200: {
           type: 'object',
           properties: {
-            id: { type: 'string' },
+            id:           { type: 'string' },
             originalName: { type: 'string' },
-            mimeType: { type: 'string' },
-            size: { type: 'number' },
-            status: { type: 'string' },
-            createdAt: { type: 'string' },
+            mimeType:     { type: 'string' },
+            size:         { type: 'number' },
+            status:       { type: 'string' },
+            batchId:      { type: 'string', nullable: true },
+            createdAt:    { type: 'string' },
           },
         },
       },
@@ -139,6 +202,7 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
         mimeType: true,
         size: true,
         status: true,
+        batchId: true,
         createdAt: true,
       },
     });
@@ -148,6 +212,64 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
     }
 
     return reply.send({ ...doc, createdAt: doc.createdAt.toISOString() });
+  });
+
+  server.post<{ Params: { id: string }; Reply: ParseResult }>('/:id/parse', {
+    schema: {
+      tags: ['Documents'],
+      summary: 'Parse a document and extract normalized transactions',
+      params: {
+        type: 'object',
+        properties: { id: { type: 'string' } },
+        required: ['id'],
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            transactions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  date:        { type: 'string' },
+                  description: { type: 'string' },
+                  amount:      { type: 'number' },
+                  direction:   { type: 'string', enum: ['inflow', 'outflow'] },
+                  balance:     { type: 'number' },
+                  category:    { type: 'string' },
+                  channel:     { type: 'string', enum: ['bank', 'ewallet', 'transfer', 'card', 'atm'] },
+                  currency:    { type: 'string' },
+                  reference:   { type: 'string' },
+                },
+                required: ['date', 'description', 'amount', 'direction'],
+              },
+            },
+            meta: {
+              type: 'object',
+              properties: {
+                documentId: { type: 'string' },
+                source:     { type: 'string' },
+                parsedAt:   { type: 'string' },
+                total:      { type: 'number' },
+                skipped:    { type: 'number' },
+              },
+            },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const result = await parseDocument(request.params.id, server.prisma);
+      return reply.send(result);
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'Document not found') return reply.notFound(err.message);
+        if (err.message.startsWith('No parser available')) return reply.badRequest(err.message);
+      }
+      throw err;
+    }
   });
 };
 

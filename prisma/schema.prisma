@@ -86,3 +86,43 @@ enum DocumentStatus {
   COMPLETED
   FAILED
 }
+
+model Workflow {
+  id          String       @id @default(uuid())
+  slug        String       @unique
+  name        String
+  description String?      @db.Text
+  enabled     Boolean      @default(true)
+  checkpoints Checkpoint[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("workflows")
+}
+
+model Checkpoint {
+  id              String           @id @default(uuid())
+  workflowId      String
+  workflow        Workflow         @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  slug            String
+  name            String
+  description     String?          @db.Text
+  enabled         Boolean          @default(true)
+  thresholdConfig ThresholdConfig?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@unique([workflowId, slug])
+  @@map("checkpoints")
+}
+
+model ThresholdConfig {
+  id           String     @id @default(uuid())
+  checkpointId String     @unique
+  checkpoint   Checkpoint @relation(fields: [checkpointId], references: [id], onDelete: Cascade)
+  greenMax     Int        @default(1)
+  amberMax     Int        @default(2)
+  updatedAt    DateTime   @updatedAt
+
+  @@map("threshold_configs")
+}

@@ -11,6 +11,7 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
+    "db:seed": "tsx --env-file .env prisma/seed.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -25,6 +26,9 @@
   },
   "homepage": "https://github.com/ReyesBryanAngel/ai-compliance-report-analyzer-api#readme",
   "description": "",
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "dependencies": {
     "@fastify/cors": "^11.2.0",
     "@fastify/helmet": "^13.0.2",

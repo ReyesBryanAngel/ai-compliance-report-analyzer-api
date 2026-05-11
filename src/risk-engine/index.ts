@@ -1,16 +1,30 @@
 import { NormalizedTransaction } from '../parser/types';
 import { RiskReport } from './types';
-import { runKyc } from './workflows';
+import { runKyc, runSg } from './workflows';
+import type { SgThresholds } from './workflows';
 
 export type { RiskFinding, RiskReport, WorkflowResult } from './types';
-export { runKyc, SUPPORTED_WORKFLOWS } from './workflows';
-export type { SupportedWorkflow } from './workflows';
+export { runKyc, runSg, SUPPORTED_WORKFLOWS } from './workflows';
+export type { SupportedWorkflow, SgThresholds } from './workflows';
+
+export type RiskEngineThresholds = {
+  sg?: Partial<SgThresholds>;
+};
+
+export type RiskEngineOptions = {
+  thresholds?: RiskEngineThresholds;
+  /** Checkpoint slugs that are enabled. When undefined, all checkpoints run. */
+  enabledCheckpoints?: Set<string>;
+};
 
 export function runRiskEngine(
   transactions: NormalizedTransaction[],
   workflows: string[],
+  options: RiskEngineOptions = {},
 ): RiskReport {
+  const { thresholds = {}, enabledCheckpoints } = options;
   const results = [];
-  if (workflows.includes('kyc')) results.push(runKyc(transactions));
+  if (workflows.includes('kyc')) results.push(runKyc(transactions, enabledCheckpoints));
+  if (workflows.includes('sg')) results.push(runSg(transactions, thresholds.sg, enabledCheckpoints));
   return { workflows: results };
 }

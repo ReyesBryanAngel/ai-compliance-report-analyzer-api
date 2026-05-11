@@ -4,10 +4,14 @@ import { computeOverallScore } from '../scoring';
 import { checkRecurringSalary } from '../checkpoints/recurring-salary';
 import { checkIncomeConsistency } from '../checkpoints/income-consistency';
 
-export function runKyc(transactions: NormalizedTransaction[]): WorkflowResult {
+export function runKyc(
+  transactions: NormalizedTransaction[],
+  enabledCheckpoints?: Set<string>,
+): WorkflowResult {
+  const enabled = (slug: string) => !enabledCheckpoints || enabledCheckpoints.has(slug);
   const findings = [
-    checkRecurringSalary(transactions),
-    checkIncomeConsistency(transactions),
+    ...(enabled('recurring-salary') ? [checkRecurringSalary(transactions)] : []),
+    ...(enabled('income-consistency') ? [checkIncomeConsistency(transactions)] : []),
   ];
 
   return {

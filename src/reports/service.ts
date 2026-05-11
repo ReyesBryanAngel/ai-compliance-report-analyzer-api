@@ -3,6 +3,7 @@ import { getParser } from '../parser';
 import type { NormalizedTransaction } from '../parser/types';
 import { runRiskEngine, SUPPORTED_WORKFLOWS } from '../risk-engine';
 import type { WorkflowResult } from '../risk-engine/types';
+import { loadSgThresholds } from '../thresholds/service';
 import type {
   GenerateReportBody,
   GenerateReportResponse,
@@ -136,7 +137,16 @@ export async function generateReport(
       allTransactions.push(...transactions);
     }
 
-    const riskReport = runRiskEngine(allTransactions, workflows);
+    const enabledCps = await prisma.checkpoint.findMany({
+      where: { workflow: { slug: { in: workflows } }, enabled: true },
+      select: { slug: true },
+    });
+    const enabledCheckpoints = new Set(enabledCps.map((cp) => cp.slug));
+
+    const thresholds = {
+      ...(workflows.includes('sg') ? { sg: await loadSgThresholds(prisma) } : {}),
+    };
+    const riskReport = runRiskEngine(allTransactions, workflows, { thresholds, enabledCheckpoints });
 
     const savedChecks: ReportCheckItem[] = [];
     for (const wfResult of riskReport.workflows) {

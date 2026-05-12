@@ -11,17 +11,19 @@ const thresholdItemSchema = {
     checkpointId: { type: 'string' },
     greenMax:     { type: 'number' },
     amberMax:     { type: 'number' },
+    params:       { type: 'object', nullable: true, additionalProperties: true },
     updatedAt:    { type: 'string' },
     isDefault:    { type: 'boolean' },
   },
 };
 
 const thresholdRoutes: FastifyPluginAsync = async (server) => {
-  // GET /api/v1/thresholds — all effective thresholds (DB overrides + defaults)
+  // GET /api/v1/thresholds — effective thresholds for the caller's org
   server.get<{ Reply: { thresholds: ThresholdConfigItem[] } }>('/', {
+    onRequest: [server.authenticate],
     schema: {
       tags: ['Thresholds'],
-      summary: 'List all effective thresholds across all workflows',
+      summary: 'List all effective thresholds for the authenticated organization',
       response: {
         200: {
           type: 'object',
@@ -31,13 +33,15 @@ const thresholdRoutes: FastifyPluginAsync = async (server) => {
         },
       },
     },
-  }, async (_request, reply) => {
-    const thresholds = await listAllThresholds(server.prisma);
+  }, async (request, reply) => {
+    const orgId = request.user.organizationId || null;
+    const thresholds = await listAllThresholds(server.prisma, orgId);
     return reply.send({ thresholds });
   });
 
   // GET /api/v1/thresholds/:workflow — thresholds for a specific workflow
   server.get<{ Params: { workflow: string }; Reply: { thresholds: ThresholdConfigItem[] } }>('/:workflow', {
+    onRequest: [server.authenticate],
     schema: {
       tags: ['Thresholds'],
       summary: 'List effective thresholds for a specific workflow',
@@ -56,19 +60,21 @@ const thresholdRoutes: FastifyPluginAsync = async (server) => {
       },
     },
   }, async (request, reply) => {
-    const thresholds = await listWorkflowThresholds(request.params.workflow, server.prisma);
+    const orgId = request.user.organizationId || null;
+    const thresholds = await listWorkflowThresholds(request.params.workflow, server.prisma, orgId);
     return reply.send({ thresholds });
   });
 
-  // PUT /api/v1/thresholds/:workflow/:checkpoint — create or update a threshold
+  // PUT /api/v1/thresholds/:workflow/:checkpoint — create or update a threshold for the org
   server.put<{
     Params: { workflow: string; checkpoint: string };
     Body: UpsertThresholdBody;
     Reply: ThresholdConfigItem;
   }>('/:workflow/:checkpoint', {
+    onRequest: [server.authenticate],
     schema: {
       tags: ['Thresholds'],
-      summary: 'Create or update a threshold for a workflow checkpoint',
+      summary: 'Create or update a threshold for the authenticated organization',
       params: {
         type: 'object',
         properties: {
@@ -91,6 +97,12 @@ const thresholdRoutes: FastifyPluginAsync = async (server) => {
             minimum: 1,
             description: 'Upper bound (inclusive) for AMBER / medium-risk rating. Values above this are RED.',
           },
+          params: {
+            type: 'object',
+            additionalProperties: true,
+            nullable: true,
+            description: 'Checkpoint-specific extra parameters (e.g. windowHours, drainRatio, minInflow for rapid-inflow-outflow)',
+          },
         },
       },
       response: { 200: thresholdItemSchema },
@@ -98,22 +110,27 @@ const thresholdRoutes: FastifyPluginAsync = async (server) => {
   }, async (request, reply) => {
     try {
       const { workflow, checkpoint } = request.params;
-      const { greenMax, amberMax } = request.body;
-      const result = await upsertThreshold(workflow, checkpoint, greenMax, amberMax, server.prisma);
+      const { greenMax, amberMax, params } = request.body;
+      const orgId = request.user.organizationId;
+      if (!orgId) return reply.badRequest('User must belong to an organization to configure thresholds');
+      const result = await upsertThreshold(workflow, checkpoint, greenMax, amberMax, server.prisma, orgId, params);
       return reply.send(result);
     } catch (err) {
-      if (err instanceof Error && (err as NodeJS.ErrnoException & { code?: string }).code === 'VALIDATION') {
-        return reply.badRequest(err.message);
+      if (err instanceof Error) {
+        const code = (err as NodeJS.ErrnoException & { code?: string }).code;
+        if (code === 'VALIDATION') return reply.badRequest(err.message);
+        if (code === 'NOT_FOUND') return reply.notFound(err.message);
       }
       throw err;
     }
   });
 
-  // DELETE /api/v1/thresholds/:workflow/:checkpoint — reset to coded default
+  // DELETE /api/v1/thresholds/:workflow/:checkpoint — reset org override back to default
   server.delete<{ Params: { workflow: string; checkpoint: string }; Reply: ThresholdConfigItem }>('/:workflow/:checkpoint', {
+    onRequest: [server.authenticate],
     schema: {
       tags: ['Thresholds'],
-      summary: 'Reset a threshold back to its coded default',
+      summary: 'Reset the organization threshold override back to the coded default',
       params: {
         type: 'object',
         properties: {
@@ -127,7 +144,9 @@ const thresholdRoutes: FastifyPluginAsync = async (server) => {
   }, async (request, reply) => {
     try {
       const { workflow, checkpoint } = request.params;
-      const result = await resetThreshold(workflow, checkpoint, server.prisma);
+      const orgId = request.user.organizationId;
+      if (!orgId) return reply.badRequest('User must belong to an organization to reset thresholds');
+      const result = await resetThreshold(workflow, checkpoint, server.prisma, orgId);
       return reply.send(result);
     } catch (err) {
       if (err instanceof Error && (err as NodeJS.ErrnoException & { code?: string }).code === 'NOT_FOUND') {

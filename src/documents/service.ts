@@ -35,6 +35,8 @@ export async function createDocumentBatch(
 export async function saveDocument(
   part: MultipartFile,
   prisma: PrismaClient,
+  uploadedById?: string,
+  organizationId?: string,
   batchId?: string,
 ): Promise<UploadedDocument> {
   if (!ALLOWED_MIME_TYPES.includes(part.mimetype as (typeof ALLOWED_MIME_TYPES)[number])) {
@@ -64,6 +66,8 @@ export async function saveDocument(
       path: filePath,
       status: 'COMPLETED',
       batchId: batchId ?? null,
+      uploadedById: uploadedById ?? null,
+      organizationId: organizationId ?? null,
     },
   });
 
@@ -74,6 +78,8 @@ export async function saveDocument(
     size: doc.size,
     status: doc.status,
     batchId: doc.batchId,
+    uploadedById: doc.uploadedById,
+    organizationId: doc.organizationId,
     createdAt: doc.createdAt.toISOString(),
   };
 }

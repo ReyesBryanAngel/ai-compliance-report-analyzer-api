@@ -1,10 +1,20 @@
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client';
+import { scrypt, randomBytes } from 'crypto';
+import { promisify } from 'util';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
+
+const scryptAsync = promisify(scrypt);
+
+async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString('hex');
+  const hash = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${salt}:${hash.toString('hex')}`;
+}
 
 const SEED_DATA = [
   {
@@ -61,6 +71,18 @@ const SEED_DATA = [
       },
     ],
   },
+  {
+    slug: 'traml',
+    name: 'Transaction Risk & AML',
+    description: 'Detects Anti-Money Laundering (AML) patterns such as rapid movement of funds through an account.',
+    checkpoints: [
+      {
+        slug: 'rapid-inflow-outflow',
+        name: 'Rapid Inflow/Outflow',
+        description: 'Counts cycles where a significant inflow is followed by outflows draining ≥80% of it within 72 hours — a layering indicator.',
+      },
+    ],
+  },
 ];
 
 async function main() {
@@ -87,6 +109,32 @@ async function main() {
     }
 
     console.log(`  ✓ ${wf.name} (${wf.checkpoints.length} checkpoints)`);
+  }
+
+  console.log('Seeding default organization and admin user...');
+
+  const defaultOrg = await prisma.organization.upsert({
+    where: { slug: 'default' },
+    update: { name: 'Default Organization' },
+    create: { slug: 'default', name: 'Default Organization' },
+  });
+
+  const adminEmail = 'admin@example.com';
+  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+
+  if (!existingAdmin) {
+    const hashed = await hashPassword('Admin1234!');
+    await prisma.user.create({
+      data: {
+        email: adminEmail,
+        name: 'Admin',
+        password: hashed,
+        organizationId: defaultOrg.id,
+      },
+    });
+    console.log(`  ✓ Admin user created: ${adminEmail} / Admin1234!`);
+  } else {
+    console.log(`  ✓ Admin user already exists: ${adminEmail}`);
   }
 
   console.log('Done.');

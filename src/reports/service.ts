@@ -4,7 +4,7 @@ import type { NormalizedTransaction } from '../parser/types';
 import { runRiskEngine, SUPPORTED_WORKFLOWS } from '../risk-engine';
 import type { WorkflowResult } from '../risk-engine/types';
 import { generateNarrative } from '../llm/service';
-import { loadKycThresholds, loadSgThresholds } from '../thresholds/service';
+import { loadKycThresholds, loadSgThresholds, loadTramlThresholds } from '../thresholds/service';
 import type {
   GenerateReportBody,
   GenerateReportResponse,
@@ -33,9 +33,35 @@ function buildSummary(
   };
 }
 
+async function resolveEnabledCheckpoints(
+  prisma: PrismaClient,
+  workflows: string[],
+  orgId: string | null,
+): Promise<Set<string>> {
+  if (orgId) {
+    const checkpoints = await prisma.checkpoint.findMany({
+      where: { workflow: { slug: { in: workflows } } },
+      include: { orgOverrides: { where: { organizationId: orgId } } },
+    });
+    return new Set(
+      checkpoints
+        .filter((cp) => cp.orgOverrides.length > 0 ? cp.orgOverrides[0].enabled : cp.enabled)
+        .map((cp) => cp.slug),
+    );
+  }
+
+  const checkpoints = await prisma.checkpoint.findMany({
+    where: { workflow: { slug: { in: workflows } }, enabled: true },
+    select: { slug: true },
+  });
+  return new Set(checkpoints.map((cp) => cp.slug));
+}
+
 export async function generateReport(
   body: GenerateReportBody,
   prisma: PrismaClient,
+  userId: string,
+  organizationId: string | null,
 ): Promise<GenerateReportResponse> {
   const { workflows, document_ids, batch_id, title } = body;
 
@@ -55,7 +81,10 @@ export async function generateReport(
 
   if (batch_id) {
     const batchDocs = await prisma.document.findMany({
-      where: { batchId: batch_id },
+      where: {
+        batchId: batch_id,
+        ...(organizationId ? { organizationId } : {}),
+      },
       select: { id: true },
     });
 
@@ -77,9 +106,12 @@ export async function generateReport(
     );
   }
 
-  // Fetch and validate documents
+  // Fetch and validate documents — scope to org so cross-org IDs surface as NOT_FOUND
   const documents = await prisma.document.findMany({
-    where: { id: { in: resolvedIds } },
+    where: {
+      id: { in: resolvedIds },
+      ...(organizationId ? { organizationId } : {}),
+    },
   });
 
   const foundIds = new Set(documents.map((d) => d.id));
@@ -126,6 +158,8 @@ export async function generateReport(
       status: 'ANALYZING',
       documentIds: resolvedIds,
       workflows,
+      userId,
+      ...(organizationId ? { organizationId } : {}),
     },
   });
 
@@ -138,15 +172,12 @@ export async function generateReport(
       allTransactions.push(...transactions);
     }
 
-    const enabledCps = await prisma.checkpoint.findMany({
-      where: { workflow: { slug: { in: workflows } }, enabled: true },
-      select: { slug: true },
-    });
-    const enabledCheckpoints = new Set(enabledCps.map((cp) => cp.slug));
+    const enabledCheckpoints = await resolveEnabledCheckpoints(prisma, workflows, organizationId);
 
     const thresholds = {
-      ...(workflows.includes('kyc') ? { kyc: await loadKycThresholds(prisma) } : {}),
-      ...(workflows.includes('sg') ? { sg: await loadSgThresholds(prisma) } : {}),
+      ...(workflows.includes('kyc') ? { kyc: await loadKycThresholds(prisma, organizationId) } : {}),
+      ...(workflows.includes('sg') ? { sg: await loadSgThresholds(prisma, organizationId) } : {}),
+      ...(workflows.includes('traml') ? { traml: await loadTramlThresholds(prisma, organizationId) } : {}),
     };
     const riskReport = runRiskEngine(allTransactions, workflows, { thresholds, enabledCheckpoints });
 
@@ -211,9 +242,14 @@ export async function generateReport(
 export async function getReport(
   reportId: string,
   prisma: PrismaClient,
+  organizationId: string | null,
 ): Promise<GenerateReportResponse> {
-  const report = await prisma.report.findUnique({
-    where: { id: reportId },
+  const where = organizationId
+    ? { id: reportId, organizationId }
+    : { id: reportId };
+
+  const report = await prisma.report.findFirst({
+    where,
     include: { checks: true },
   });
 
@@ -242,8 +278,12 @@ export async function getReport(
   };
 }
 
-export async function listReports(prisma: PrismaClient): Promise<ListReportItem[]> {
+export async function listReports(
+  prisma: PrismaClient,
+  organizationId: string | null,
+): Promise<ListReportItem[]> {
   const reports = await prisma.report.findMany({
+    where: organizationId ? { organizationId } : {},
     orderBy: { createdAt: 'desc' },
     select: {
       id: true,

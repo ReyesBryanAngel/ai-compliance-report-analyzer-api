@@ -8,10 +8,26 @@ interface ListQuery {
   document_id?: string;
 }
 
+const documentSchema = {
+  type: 'object',
+  properties: {
+    id:             { type: 'string' },
+    originalName:   { type: 'string' },
+    mimeType:       { type: 'string' },
+    size:           { type: 'number' },
+    status:         { type: 'string' },
+    batchId:        { type: 'string', nullable: true },
+    uploadedById:   { type: 'string', nullable: true },
+    organizationId: { type: 'string', nullable: true },
+    createdAt:      { type: 'string' },
+  },
+};
+
 const documentRoutes: FastifyPluginAsync = async (server) => {
   await ensureUploadDir();
 
   server.post<{ Reply: UploadResponse }>('/upload', {
+    onRequest: [server.authenticate],
     schema: {
       tags: ['Documents'],
       summary: 'Upload one or more documents, optionally grouped into a named batch',
@@ -31,21 +47,7 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
                 createdAt:   { type: 'string' },
               },
             },
-            documents: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  id:           { type: 'string' },
-                  originalName: { type: 'string' },
-                  mimeType:     { type: 'string' },
-                  size:         { type: 'number' },
-                  status:       { type: 'string' },
-                  batchId:      { type: 'string', nullable: true },
-                  createdAt:    { type: 'string' },
-                },
-              },
-            },
+            documents: { type: 'array', items: documentSchema },
             failed: {
               type: 'array',
               items: {
@@ -61,13 +63,12 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
       },
     },
   }, async (request, reply) => {
+    const uploadedById = request.user.sub;
+    const orgId = request.user.organizationId || undefined;
     const uploaded: UploadedDocument[] = [];
     const failed: UploadResponse['failed'] = [];
     const fields: Record<string, string> = {};
 
-    // Consume all parts immediately — file streams must not be left unread.
-    // Fields may arrive in any order relative to files, so batch creation
-    // happens after the loop once we know batch_name for sure.
     for await (const part of request.parts()) {
       if (part.type === 'field') {
         fields[part.fieldname] = String(part.value);
@@ -75,10 +76,9 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
       }
 
       try {
-        const doc = await saveDocument(part, server.prisma);
+        const doc = await saveDocument(part, server.prisma, uploadedById, orgId);
         uploaded.push(doc);
       } catch (err) {
-        // Drain the stream to prevent the request from hanging
         part.file.resume();
         failed.push({
           filename: part.filename,
@@ -87,7 +87,6 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
       }
     }
 
-    // Create batch and link documents after all parts are read
     let batchRecord: BatchInfo | null = null;
     if (fields['batch_name'] && uploaded.length > 0) {
       batchRecord = await createDocumentBatch(
@@ -110,9 +109,10 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
   });
 
   server.get<{ Querystring: ListQuery }>('/list', {
+    onRequest: [server.authenticate],
     schema: {
       tags: ['Documents'],
-      summary: 'List documents, optionally filtered by batch ID or document ID',
+      summary: 'List documents uploaded by users in the same organization',
       querystring: {
         type: 'object',
         properties: {
@@ -124,31 +124,20 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
         200: {
           type: 'object',
           properties: {
-            documents: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  id:           { type: 'string' },
-                  originalName: { type: 'string' },
-                  mimeType:     { type: 'string' },
-                  size:         { type: 'number' },
-                  status:       { type: 'string' },
-                  batchId:      { type: 'string', nullable: true },
-                  createdAt:    { type: 'string' },
-                },
-              },
-            },
+            documents: { type: 'array', items: documentSchema },
           },
         },
       },
     },
   }, async (request, reply) => {
     const { batch_id, document_id } = request.query;
+    const orgId = request.user.organizationId || null;
 
-    const where: Record<string, unknown> = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = {};
     if (batch_id) where.batchId = batch_id;
     if (document_id) where.id = document_id;
+    if (orgId) where.organizationId = orgId;
 
     const documents = await server.prisma.document.findMany({
       where,
@@ -160,6 +149,8 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
         size: true,
         status: true,
         batchId: true,
+        uploadedById: true,
+        organizationId: true,
         createdAt: true,
       },
     });
@@ -170,6 +161,7 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
   });
 
   server.get<{ Params: { id: string } }>('/:id', {
+    onRequest: [server.authenticate],
     schema: {
       tags: ['Documents'],
       summary: 'Get a document by ID',
@@ -178,24 +170,17 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
         properties: { id: { type: 'string' } },
         required: ['id'],
       },
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            id:           { type: 'string' },
-            originalName: { type: 'string' },
-            mimeType:     { type: 'string' },
-            size:         { type: 'number' },
-            status:       { type: 'string' },
-            batchId:      { type: 'string', nullable: true },
-            createdAt:    { type: 'string' },
-          },
-        },
-      },
+      response: { 200: documentSchema },
     },
   }, async (request, reply) => {
-    const doc = await server.prisma.document.findUnique({
-      where: { id: request.params.id },
+    const orgId = request.user.organizationId || null;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = { id: request.params.id };
+    if (orgId) where.organizationId = orgId;
+
+    const doc = await server.prisma.document.findFirst({
+      where,
       select: {
         id: true,
         originalName: true,
@@ -203,18 +188,19 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
         size: true,
         status: true,
         batchId: true,
+        uploadedById: true,
+        organizationId: true,
         createdAt: true,
       },
     });
 
-    if (!doc) {
-      return reply.notFound('Document not found');
-    }
+    if (!doc) return reply.notFound('Document not found');
 
     return reply.send({ ...doc, createdAt: doc.createdAt.toISOString() });
   });
 
   server.post<{ Params: { id: string }; Reply: ParseResult }>('/:id/parse', {
+    onRequest: [server.authenticate],
     schema: {
       tags: ['Documents'],
       summary: 'Parse a document and extract normalized transactions',

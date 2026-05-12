@@ -7,29 +7,50 @@ datasource db {
   provider = "postgresql"
 }
 
+model Organization {
+  id                  String                  @id @default(uuid())
+  name                String
+  slug                String                  @unique
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  users               User[]
+  reports             Report[]
+  documents           Document[]
+  checkpointOverrides OrgCheckpointOverride[]
+  thresholdConfigs    OrgThresholdConfig[]
+
+  @@map("organizations")
+}
+
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  reports   Report[]
+  id             String        @id @default(uuid())
+  email          String        @unique
+  name           String?
+  password       String
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  reports        Report[]
+  documents      Document[]
 
   @@map("users")
 }
 
 model Report {
-  id          String            @id @default(uuid())
-  title       String?
-  content     String?           @db.Text
-  status      ReportStatus      @default(PENDING)
-  userId      String?
-  user        User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
-  checks      ComplianceCheck[]
-  documentIds String[]          @default([])
-  workflows   String[]          @default([])
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id             String            @id @default(uuid())
+  title          String?
+  content        String?           @db.Text
+  status         ReportStatus      @default(PENDING)
+  userId         String?
+  user           User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organizationId String?
+  organization   Organization?     @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  checks         ComplianceCheck[]
+  documentIds    String[]          @default([])
+  workflows      String[]          @default([])
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   @@map("reports")
 }
@@ -64,17 +85,21 @@ model DocumentBatch {
 }
 
 model Document {
-  id           String         @id @default(uuid())
-  originalName String
-  storedName   String
-  mimeType     String
-  size         Int
-  path         String
-  status       DocumentStatus @default(PENDING)
-  batchId      String?
-  batch        DocumentBatch? @relation(fields: [batchId], references: [id])
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id             String         @id @default(uuid())
+  originalName   String
+  storedName     String
+  mimeType       String
+  size           Int
+  path           String
+  status         DocumentStatus @default(PENDING)
+  batchId        String?
+  batch          DocumentBatch? @relation(fields: [batchId], references: [id])
+  uploadedById   String?
+  uploadedBy     User?          @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  organizationId String?
+  organization   Organization?  @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   @@map("documents")
 }
@@ -101,28 +126,45 @@ model Workflow {
 }
 
 model Checkpoint {
-  id              String           @id @default(uuid())
-  workflowId      String
-  workflow        Workflow         @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  slug            String
-  name            String
-  description     String?          @db.Text
-  enabled         Boolean          @default(true)
-  thresholdConfig ThresholdConfig?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id                  String                  @id @default(uuid())
+  workflowId          String
+  workflow            Workflow                @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  slug                String
+  name                String
+  description         String?                 @db.Text
+  enabled             Boolean                 @default(true)
+  orgOverrides        OrgCheckpointOverride[]
+  orgThresholdConfigs OrgThresholdConfig[]
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
 
   @@unique([workflowId, slug])
   @@map("checkpoints")
 }
 
-model ThresholdConfig {
-  id           String     @id @default(uuid())
-  checkpointId String     @unique
-  checkpoint   Checkpoint @relation(fields: [checkpointId], references: [id], onDelete: Cascade)
-  greenMax     Int        @default(1)
-  amberMax     Int        @default(2)
-  updatedAt    DateTime   @updatedAt
+model OrgCheckpointOverride {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  checkpointId   String
+  checkpoint     Checkpoint   @relation(fields: [checkpointId], references: [id], onDelete: Cascade)
+  enabled        Boolean      @default(true)
 
-  @@map("threshold_configs")
+  @@unique([organizationId, checkpointId])
+  @@map("org_checkpoint_overrides")
+}
+
+model OrgThresholdConfig {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  checkpointId   String
+  checkpoint     Checkpoint   @relation(fields: [checkpointId], references: [id], onDelete: Cascade)
+  greenMax       Int
+  amberMax       Int
+  params         Json?
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, checkpointId])
+  @@map("org_threshold_configs")
 }

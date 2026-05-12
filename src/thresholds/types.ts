@@ -5,6 +5,7 @@ export interface ThresholdConfigItem {
   checkpointId: string;
   greenMax: number;
   amberMax: number;
+  params: Record<string, unknown> | null;
   updatedAt: string;
   isDefault: boolean;
 }
@@ -12,4 +13,5 @@ export interface ThresholdConfigItem {
 export interface UpsertThresholdBody {
   greenMax: number;
   amberMax: number;
+  params?: Record<string, unknown>;
 }

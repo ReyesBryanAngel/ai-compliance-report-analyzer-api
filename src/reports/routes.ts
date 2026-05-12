@@ -77,6 +77,7 @@ const reportResponseSchema = {
 
 const reportRoutes: FastifyPluginAsync = async (server) => {
   server.post<{ Body: GenerateReportBody; Reply: GenerateReportResponse }>('/generate', {
+    onRequest: [server.authenticate],
     schema: {
       tags: ['Reports'],
       summary: 'Generate a compliance report for one or more documents',
@@ -111,7 +112,9 @@ const reportRoutes: FastifyPluginAsync = async (server) => {
     },
   }, async (request, reply) => {
     try {
-      const result = await generateReport(request.body, server.prisma);
+      const { sub: userId, organizationId } = request.user;
+      const orgId = organizationId || null;
+      const result = await generateReport(request.body, server.prisma, userId, orgId);
       return reply.send(result);
     } catch (err) {
       if (err instanceof Error) {
@@ -126,6 +129,7 @@ const reportRoutes: FastifyPluginAsync = async (server) => {
   });
 
   server.get<{ Params: { id: string }; Reply: GenerateReportResponse }>('/:id', {
+    onRequest: [server.authenticate],
     schema: {
       tags: ['Reports'],
       summary: 'Get a compliance report by ID',
@@ -138,7 +142,8 @@ const reportRoutes: FastifyPluginAsync = async (server) => {
     },
   }, async (request, reply) => {
     try {
-      const result = await getReport(request.params.id, server.prisma);
+      const orgId = request.user.organizationId || null;
+      const result = await getReport(request.params.id, server.prisma, orgId);
       return reply.send(result);
     } catch (err) {
       if (err instanceof Error && (err as NodeJS.ErrnoException & { code?: string }).code === 'NOT_FOUND') {
@@ -149,9 +154,10 @@ const reportRoutes: FastifyPluginAsync = async (server) => {
   });
 
   server.get<{ Reply: { reports: ListReportItem[] } }>('/list', {
+    onRequest: [server.authenticate],
     schema: {
       tags: ['Reports'],
-      summary: 'List all compliance reports',
+      summary: 'List all compliance reports for the authenticated organization',
       response: {
         200: {
           type: 'object',
@@ -175,8 +181,9 @@ const reportRoutes: FastifyPluginAsync = async (server) => {
         },
       },
     },
-  }, async (_request, reply) => {
-    const reports = await listReports(server.prisma);
+  }, async (request, reply) => {
+    const orgId = request.user.organizationId || null;
+    const reports = await listReports(server.prisma, orgId);
     return reply.send({ reports });
   });
 };

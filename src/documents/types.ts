@@ -25,6 +25,8 @@ export interface UploadedDocument {
   size: number;
   status: string;
   batchId: string | null;
+  uploadedById: string | null;
+  organizationId: string | null;
   createdAt: string;
 }
 

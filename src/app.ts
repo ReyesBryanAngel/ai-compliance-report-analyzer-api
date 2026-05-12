@@ -4,6 +4,7 @@ import helmet from '@fastify/helmet';
 import sensible from '@fastify/sensible';
 import multipart from '@fastify/multipart';
 import prismaPlugin from './plugins/prisma';
+import authPlugin from './plugins/auth';
 import { registerRoutes } from './routes';
 
 export async function buildApp(): Promise<FastifyInstance> {
@@ -28,6 +29,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     },
   });
   await server.register(prismaPlugin);
+  await server.register(authPlugin);
 
   await registerRoutes(server);
 

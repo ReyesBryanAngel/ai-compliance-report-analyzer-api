@@ -4,7 +4,7 @@ import type { NormalizedTransaction } from '../parser/types';
 import { runRiskEngine, SUPPORTED_WORKFLOWS } from '../risk-engine';
 import type { WorkflowResult } from '../risk-engine/types';
 import { generateNarrative } from '../llm/service';
-import { loadSgThresholds } from '../thresholds/service';
+import { loadKycThresholds, loadSgThresholds } from '../thresholds/service';
 import type {
   GenerateReportBody,
   GenerateReportResponse,
@@ -145,6 +145,7 @@ export async function generateReport(
     const enabledCheckpoints = new Set(enabledCps.map((cp) => cp.slug));
 
     const thresholds = {
+      ...(workflows.includes('kyc') ? { kyc: await loadKycThresholds(prisma) } : {}),
       ...(workflows.includes('sg') ? { sg: await loadSgThresholds(prisma) } : {}),
     };
     const riskReport = runRiskEngine(allTransactions, workflows, { thresholds, enabledCheckpoints });

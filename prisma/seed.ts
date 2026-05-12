@@ -22,6 +22,16 @@ const SEED_DATA = [
         name: 'Income Consistency',
         description: 'Measures month-over-month income stability via coefficient of variation and trend analysis.',
       },
+      {
+        slug: 'loan-stacking',
+        name: 'Loan Stacking Indicators',
+        description: 'Counts loan disbursement inflows to detect multiple concurrent credit facilities.',
+      },
+      {
+        slug: 'low-balance-persistence',
+        name: 'Low Balance Persistence',
+        description: 'Counts months where the end-of-month balance was below 20% of average monthly inflow.',
+      },
     ],
   },
   {
@@ -43,6 +53,11 @@ const SEED_DATA = [
         slug: 'gambling-activity',
         name: 'Gambling Activity',
         description: 'Counts total gambling-related transactions (both inflows and outflows).',
+      },
+      {
+        slug: 'gambling-overdrafts',
+        name: 'Gambling Overdrafts',
+        description: 'Counts gambling outflow transactions that resulted in a negative account balance.',
       },
     ],
   },

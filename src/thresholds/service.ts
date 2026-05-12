@@ -1,9 +1,12 @@
 import type { PrismaClient } from '../generated/prisma/client';
+import { KYC_DEFAULT_THRESHOLDS } from '../risk-engine/workflows/kyc';
+import type { KycThresholds } from '../risk-engine/workflows/kyc';
 import { SG_DEFAULT_THRESHOLDS } from '../risk-engine/workflows/sg';
 import type { SgThresholds } from '../risk-engine/workflows/sg';
 import type { ThresholdConfigItem } from './types';
 
 const WORKFLOW_DEFAULTS: Record<string, Record<string, { greenMax: number; amberMax: number }>> = {
+  kyc: KYC_DEFAULT_THRESHOLDS,
   sg: SG_DEFAULT_THRESHOLDS,
 };
 
@@ -135,6 +138,19 @@ export async function resetThreshold(
     updatedAt: '',
     isDefault: true,
   };
+}
+
+export async function loadKycThresholds(prisma: PrismaClient): Promise<Partial<KycThresholds>> {
+  const configs = await prisma.thresholdConfig.findMany({
+    where: { checkpoint: { workflow: { slug: 'kyc' } } },
+    include: { checkpoint: true },
+  });
+  const result: Partial<KycThresholds> = {};
+  for (const config of configs) {
+    const slug = config.checkpoint.slug as keyof KycThresholds;
+    result[slug] = { greenMax: config.greenMax, amberMax: config.amberMax };
+  }
+  return result;
 }
 
 export async function loadSgThresholds(prisma: PrismaClient): Promise<Partial<SgThresholds>> {

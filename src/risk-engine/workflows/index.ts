@@ -1,4 +1,5 @@
 export { runKyc } from './kyc';
+export type { KycThresholds } from './kyc';
 export { runSg } from './sg';
 export type { SgThresholds } from './sg';
 

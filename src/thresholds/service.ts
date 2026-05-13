@@ -14,6 +14,10 @@ import {
   RAPID_MOVEMENT_DEFAULTS,
 } from '../risk-engine/checkpoints/rapid-movement-of-funds';
 import type { RapidMovementThresholds } from '../risk-engine/checkpoints/rapid-movement-of-funds';
+import {
+  CIRCULAR_TRANSACTION_DEFAULTS,
+} from '../risk-engine/checkpoints/circular-transaction';
+import type { CircularTransactionThresholds } from '../risk-engine/checkpoints/circular-transaction';
 import type { ThresholdConfigItem } from './types';
 
 const WORKFLOW_DEFAULTS: Record<string, Record<string, { greenMax: number; amberMax: number }>> = {
@@ -257,6 +261,15 @@ export async function loadTramlThresholds(
         amberMax: c.amberMax,
         // params carries checkpoint-specific overrides (windowHours, velocityThreshold)
         ...(c.params ? (c.params as Partial<RapidMovementThresholds>) : {}),
+      };
+    }
+    if (c.checkpoint.slug === 'circular-transaction') {
+      result['circular-transaction'] = {
+        ...CIRCULAR_TRANSACTION_DEFAULTS,
+        greenMax: c.greenMax,
+        amberMax: c.amberMax,
+        // params carries checkpoint-specific overrides (windowHours, amountTolerance, minAmount)
+        ...(c.params ? (c.params as Partial<CircularTransactionThresholds>) : {}),
       };
     }
   }

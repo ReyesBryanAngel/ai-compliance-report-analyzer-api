@@ -11,15 +11,22 @@ import {
   RAPID_MOVEMENT_DEFAULTS,
 } from '../checkpoints/rapid-movement-of-funds';
 import type { RapidMovementThresholds } from '../checkpoints/rapid-movement-of-funds';
+import {
+  checkCircularTransaction,
+  CIRCULAR_TRANSACTION_DEFAULTS,
+} from '../checkpoints/circular-transaction';
+import type { CircularTransactionThresholds } from '../checkpoints/circular-transaction';
 
 export type TramlThresholds = {
   'rapid-inflow-outflow': RapidInflowOutflowThresholds;
   'rapid-movement-of-funds': RapidMovementThresholds;
+  'circular-transaction': CircularTransactionThresholds;
 };
 
 export const TRAML_DEFAULT_THRESHOLDS: TramlThresholds = {
   'rapid-inflow-outflow': RAPID_INFLOW_OUTFLOW_DEFAULTS,
   'rapid-movement-of-funds': RAPID_MOVEMENT_DEFAULTS,
+  'circular-transaction': CIRCULAR_TRANSACTION_DEFAULTS,
 };
 
 /** Subset of TRAML_DEFAULT_THRESHOLDS shaped for the shared WORKFLOW_DEFAULTS map in thresholds/service.ts. */
@@ -31,6 +38,10 @@ export const TRAML_THRESHOLD_BANDS: Record<keyof TramlThresholds, { greenMax: nu
   'rapid-movement-of-funds': {
     greenMax: RAPID_MOVEMENT_DEFAULTS.greenMax,
     amberMax: RAPID_MOVEMENT_DEFAULTS.amberMax,
+  },
+  'circular-transaction': {
+    greenMax: CIRCULAR_TRANSACTION_DEFAULTS.greenMax,
+    amberMax: CIRCULAR_TRANSACTION_DEFAULTS.amberMax,
   },
 };
 
@@ -52,6 +63,9 @@ export function runTraml(
       : []),
     ...(enabled('rapid-movement-of-funds')
       ? [checkRapidMovementOfFunds(transactions, resolved['rapid-movement-of-funds'])]
+      : []),
+    ...(enabled('circular-transaction')
+      ? [checkCircularTransaction(transactions, resolved['circular-transaction'])]
       : []),
   ];
 

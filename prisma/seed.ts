@@ -81,6 +81,16 @@ const SEED_DATA = [
         name: 'Rapid Inflow/Outflow',
         description: 'Counts cycles where a significant inflow is followed by outflows draining ≥80% of it within 72 hours — a layering indicator.',
       },
+      {
+        slug: 'rapid-movement-of-funds',
+        name: 'Rapid Movement of Funds',
+        description: 'Counts non-overlapping 24-hour windows where the total amount moved exceeds a velocity threshold — a structuring indicator.',
+      },
+      {
+        slug: 'circular-transaction',
+        name: 'Circular Transaction',
+        description: 'Counts outflows that are returned to the account at a matching amount (±5%) within 72 hours — a round-trip / layering indicator.',
+      },
     ],
   },
 ];

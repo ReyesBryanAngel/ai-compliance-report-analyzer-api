@@ -10,6 +10,10 @@ import {
   RAPID_INFLOW_OUTFLOW_DEFAULTS,
 } from '../risk-engine/checkpoints/rapid-inflow-outflow';
 import type { RapidInflowOutflowThresholds } from '../risk-engine/checkpoints/rapid-inflow-outflow';
+import {
+  RAPID_MOVEMENT_DEFAULTS,
+} from '../risk-engine/checkpoints/rapid-movement-of-funds';
+import type { RapidMovementThresholds } from '../risk-engine/checkpoints/rapid-movement-of-funds';
 import type { ThresholdConfigItem } from './types';
 
 const WORKFLOW_DEFAULTS: Record<string, Record<string, { greenMax: number; amberMax: number }>> = {
@@ -244,6 +248,15 @@ export async function loadTramlThresholds(
         // params carries checkpoint-specific overrides (windowHours, drainRatio, minInflow)
         // that don't fit the greenMax/amberMax columns
         ...(c.params ? (c.params as Partial<RapidInflowOutflowThresholds>) : {}),
+      };
+    }
+    if (c.checkpoint.slug === 'rapid-movement-of-funds') {
+      result['rapid-movement-of-funds'] = {
+        ...RAPID_MOVEMENT_DEFAULTS,
+        greenMax: c.greenMax,
+        amberMax: c.amberMax,
+        // params carries checkpoint-specific overrides (windowHours, velocityThreshold)
+        ...(c.params ? (c.params as Partial<RapidMovementThresholds>) : {}),
       };
     }
   }

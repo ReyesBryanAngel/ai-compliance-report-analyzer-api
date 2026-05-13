@@ -6,13 +6,20 @@ import {
   RAPID_INFLOW_OUTFLOW_DEFAULTS,
 } from '../checkpoints/rapid-inflow-outflow';
 import type { RapidInflowOutflowThresholds } from '../checkpoints/rapid-inflow-outflow';
+import {
+  checkRapidMovementOfFunds,
+  RAPID_MOVEMENT_DEFAULTS,
+} from '../checkpoints/rapid-movement-of-funds';
+import type { RapidMovementThresholds } from '../checkpoints/rapid-movement-of-funds';
 
 export type TramlThresholds = {
   'rapid-inflow-outflow': RapidInflowOutflowThresholds;
+  'rapid-movement-of-funds': RapidMovementThresholds;
 };
 
 export const TRAML_DEFAULT_THRESHOLDS: TramlThresholds = {
   'rapid-inflow-outflow': RAPID_INFLOW_OUTFLOW_DEFAULTS,
+  'rapid-movement-of-funds': RAPID_MOVEMENT_DEFAULTS,
 };
 
 /** Subset of TRAML_DEFAULT_THRESHOLDS shaped for the shared WORKFLOW_DEFAULTS map in thresholds/service.ts. */
@@ -20,6 +27,10 @@ export const TRAML_THRESHOLD_BANDS: Record<keyof TramlThresholds, { greenMax: nu
   'rapid-inflow-outflow': {
     greenMax: RAPID_INFLOW_OUTFLOW_DEFAULTS.greenMax,
     amberMax: RAPID_INFLOW_OUTFLOW_DEFAULTS.amberMax,
+  },
+  'rapid-movement-of-funds': {
+    greenMax: RAPID_MOVEMENT_DEFAULTS.greenMax,
+    amberMax: RAPID_MOVEMENT_DEFAULTS.amberMax,
   },
 };
 
@@ -38,6 +49,9 @@ export function runTraml(
   const findings = [
     ...(enabled('rapid-inflow-outflow')
       ? [checkRapidInflowOutflow(transactions, resolved['rapid-inflow-outflow'])]
+      : []),
+    ...(enabled('rapid-movement-of-funds')
+      ? [checkRapidMovementOfFunds(transactions, resolved['rapid-movement-of-funds'])]
       : []),
   ];
 

@@ -16,17 +16,24 @@ import {
   CIRCULAR_TRANSACTION_DEFAULTS,
 } from '../checkpoints/circular-transaction';
 import type { CircularTransactionThresholds } from '../checkpoints/circular-transaction';
+import {
+  checkFragmentedTransactions,
+  FRAGMENTED_TRANSACTION_DEFAULTS,
+} from '../checkpoints/fragmented-transactions';
+import type { FragmentedTransactionThresholds } from '../checkpoints/fragmented-transactions';
 
 export type TramlThresholds = {
   'rapid-inflow-outflow': RapidInflowOutflowThresholds;
   'rapid-movement-of-funds': RapidMovementThresholds;
   'circular-transaction': CircularTransactionThresholds;
+  'fragmented-transactions': FragmentedTransactionThresholds;
 };
 
 export const TRAML_DEFAULT_THRESHOLDS: TramlThresholds = {
   'rapid-inflow-outflow': RAPID_INFLOW_OUTFLOW_DEFAULTS,
   'rapid-movement-of-funds': RAPID_MOVEMENT_DEFAULTS,
   'circular-transaction': CIRCULAR_TRANSACTION_DEFAULTS,
+  'fragmented-transactions': FRAGMENTED_TRANSACTION_DEFAULTS,
 };
 
 /** Subset of TRAML_DEFAULT_THRESHOLDS shaped for the shared WORKFLOW_DEFAULTS map in thresholds/service.ts. */
@@ -42,6 +49,10 @@ export const TRAML_THRESHOLD_BANDS: Record<keyof TramlThresholds, { greenMax: nu
   'circular-transaction': {
     greenMax: CIRCULAR_TRANSACTION_DEFAULTS.greenMax,
     amberMax: CIRCULAR_TRANSACTION_DEFAULTS.amberMax,
+  },
+  'fragmented-transactions': {
+    greenMax: FRAGMENTED_TRANSACTION_DEFAULTS.greenMax,
+    amberMax: FRAGMENTED_TRANSACTION_DEFAULTS.amberMax,
   },
 };
 
@@ -66,6 +77,9 @@ export function runTraml(
       : []),
     ...(enabled('circular-transaction')
       ? [checkCircularTransaction(transactions, resolved['circular-transaction'])]
+      : []),
+    ...(enabled('fragmented-transactions')
+      ? [checkFragmentedTransactions(transactions, resolved['fragmented-transactions'])]
       : []),
   ];
 

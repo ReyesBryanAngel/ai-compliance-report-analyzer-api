@@ -121,6 +121,29 @@ export function parseDate(raw: string | undefined): string | null {
 
 // ── Enrichment ───────────────────────────────────────────────────────────────
 
+const PHONE_RE = /\b(09\d{2}[-\s]?\d{3}[-\s]?\d{4}|\+639\d{9})\b/;
+const ACCOUNT_RE = /(?<!\d)(\d{10,16})(?!\d)/;
+const BENEFICIARY_NOISE =
+  /\b(transfer|trf|fund|to|from|via|instapay|pesonet|rtgs|swift|wire|bdo|bpi|metrobank|unionbank|rcbc|pnb|gcash|paymaya|maya|grabpay|shopeepay|bank|online|mobile|send|receive|payment|pay|remit|remittance|interbank|peso|net|account|acct|no|ref|the|and|for|of|a)\b/gi;
+
+export function extractBeneficiaryId(description: string): string | undefined {
+  const phoneMatch = description.match(PHONE_RE);
+  if (phoneMatch) return `phone:${phoneMatch[1].replace(/[-\s]/g, '')}`;
+
+  const acctMatch = description.match(ACCOUNT_RE);
+  if (acctMatch) return `acct:${acctMatch[1]}`;
+
+  const name = description
+    .toLowerCase()
+    .replace(BENEFICIARY_NOISE, ' ')
+    .replace(/\d+/g, ' ')
+    .replace(/[^a-z\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return name.length >= 3 ? `name:${name}` : undefined;
+}
+
 export function detectChannel(description: string): NormalizedTransaction['channel'] {
   const d = description.toUpperCase();
   if (/\bATM\b/.test(d)) return 'atm';

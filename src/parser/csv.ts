@@ -7,6 +7,7 @@ import {
   parseDate,
   detectChannel,
   detectCategory,
+  extractBeneficiaryId,
 } from './normalize';
 
 export class CsvParser implements ParserStrategy {
@@ -67,6 +68,8 @@ export class CsvParser implements ParserStrategy {
       tx.channel = detectChannel(description);
       const category = detectCategory(description, direction);
       if (category) tx.category = category;
+      const beneficiaryId = extractBeneficiaryId(description);
+      if (beneficiaryId) tx.beneficiaryId = beneficiaryId;
 
       transactions.push(tx);
     }

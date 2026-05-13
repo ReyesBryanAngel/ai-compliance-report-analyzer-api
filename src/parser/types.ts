@@ -8,6 +8,7 @@ export type NormalizedTransaction = {
   channel?: 'bank' | 'ewallet' | 'transfer' | 'card' | 'atm';
   currency?: string;      // ISO 4217 e.g. "PHP", "USD"
   reference?: string;     // transaction reference / check number
+  beneficiaryId?: string; // canonical recipient key: "phone:09171234567", "acct:1234567890", or "name:juan-dela-cruz"
 };
 
 export type ParseResult = {

@@ -6,6 +6,7 @@ import {
   BALANCE_DISCREPANCY_DEFAULTS,
 } from '../checkpoints/statement-balance-discrepancy';
 import { checkAmountDigitDistribution } from '../checkpoints/amount-digit-distribution';
+import { checkClonedTransactionPattern } from '../checkpoints/cloned-transaction-pattern';
 import type { ThresholdBand } from '../checkpoints/gambling-utils';
 
 export type DocumentIntegrityThresholds = {
@@ -34,6 +35,9 @@ export function runDocumentIntegrity(
       : []),
     ...(enabled('amount-digit-distribution')
       ? [checkAmountDigitDistribution(transactions)]
+      : []),
+    ...(enabled('cloned-transaction-pattern')
+      ? [checkClonedTransactionPattern(transactions)]
       : []),
   ];
 

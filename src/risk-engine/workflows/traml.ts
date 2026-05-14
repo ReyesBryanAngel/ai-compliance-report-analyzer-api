@@ -36,6 +36,7 @@ import {
   GEO_RISK_DEFAULTS,
 } from '../checkpoints/geographic-risk-scoring';
 import type { GeographicRiskThresholds } from '../checkpoints/geographic-risk-scoring';
+import { checkSanctionsWatchlist } from '../checkpoints/sanctions-watchlist';
 
 export type TramlThresholds = {
   'rapid-inflow-outflow': RapidInflowOutflowThresholds;
@@ -123,6 +124,7 @@ export function runTraml(
     ...(enabled('geographic-risk-scoring')
       ? [checkGeographicRiskScoring(transactions, resolved['geographic-risk-scoring'])]
       : []),
+    ...(enabled('sanctions-watchlist') ? [checkSanctionsWatchlist(transactions)] : []),
   ];
 
   return {

@@ -5,6 +5,7 @@ import {
   checkStatementBalanceDiscrepancy,
   BALANCE_DISCREPANCY_DEFAULTS,
 } from '../checkpoints/statement-balance-discrepancy';
+import { checkAmountDigitDistribution } from '../checkpoints/amount-digit-distribution';
 import type { ThresholdBand } from '../checkpoints/gambling-utils';
 
 export type DocumentIntegrityThresholds = {
@@ -30,6 +31,9 @@ export function runDocumentIntegrity(
   const findings = [
     ...(enabled('statement-balance-discrepancy')
       ? [checkStatementBalanceDiscrepancy(transactions, resolved['statement-balance-discrepancy'])]
+      : []),
+    ...(enabled('amount-digit-distribution')
+      ? [checkAmountDigitDistribution(transactions)]
       : []),
   ];
 

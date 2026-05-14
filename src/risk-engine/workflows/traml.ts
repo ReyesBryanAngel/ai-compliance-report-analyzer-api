@@ -31,6 +31,11 @@ import {
   CROSS_BORDER_DEFAULTS,
 } from '../checkpoints/cross-border-transfer';
 import type { CrossBorderThresholds } from '../checkpoints/cross-border-transfer';
+import {
+  checkGeographicRiskScoring,
+  GEO_RISK_DEFAULTS,
+} from '../checkpoints/geographic-risk-scoring';
+import type { GeographicRiskThresholds } from '../checkpoints/geographic-risk-scoring';
 
 export type TramlThresholds = {
   'rapid-inflow-outflow': RapidInflowOutflowThresholds;
@@ -39,6 +44,7 @@ export type TramlThresholds = {
   'fragmented-transactions': FragmentedTransactionThresholds;
   'ctr-threshold': CtrThresholds;
   'cross-border-transfer': CrossBorderThresholds;
+  'geographic-risk-scoring': GeographicRiskThresholds;
 };
 
 export const TRAML_DEFAULT_THRESHOLDS: TramlThresholds = {
@@ -48,6 +54,7 @@ export const TRAML_DEFAULT_THRESHOLDS: TramlThresholds = {
   'fragmented-transactions': FRAGMENTED_TRANSACTION_DEFAULTS,
   'ctr-threshold': CTR_DEFAULTS,
   'cross-border-transfer': CROSS_BORDER_DEFAULTS,
+  'geographic-risk-scoring': GEO_RISK_DEFAULTS,
 };
 
 /** Subset of TRAML_DEFAULT_THRESHOLDS shaped for the shared WORKFLOW_DEFAULTS map in thresholds/service.ts. */
@@ -75,6 +82,10 @@ export const TRAML_THRESHOLD_BANDS: Record<keyof TramlThresholds, { greenMax: nu
   'cross-border-transfer': {
     greenMax: CROSS_BORDER_DEFAULTS.greenMax,
     amberMax: CROSS_BORDER_DEFAULTS.amberMax,
+  },
+  'geographic-risk-scoring': {
+    greenMax: GEO_RISK_DEFAULTS.greenMax,
+    amberMax: GEO_RISK_DEFAULTS.amberMax,
   },
 };
 
@@ -108,6 +119,9 @@ export function runTraml(
       : []),
     ...(enabled('cross-border-transfer')
       ? [checkCrossBorderTransfer(transactions, resolved['cross-border-transfer'])]
+      : []),
+    ...(enabled('geographic-risk-scoring')
+      ? [checkGeographicRiskScoring(transactions, resolved['geographic-risk-scoring'])]
       : []),
   ];
 

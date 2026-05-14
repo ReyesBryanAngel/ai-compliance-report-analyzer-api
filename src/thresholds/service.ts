@@ -30,6 +30,10 @@ import {
   CROSS_BORDER_DEFAULTS,
 } from '../risk-engine/checkpoints/cross-border-transfer';
 import type { CrossBorderThresholds } from '../risk-engine/checkpoints/cross-border-transfer';
+import {
+  GEO_RISK_DEFAULTS,
+} from '../risk-engine/checkpoints/geographic-risk-scoring';
+import type { GeographicRiskThresholds } from '../risk-engine/checkpoints/geographic-risk-scoring';
 import type { ThresholdConfigItem } from './types';
 
 const WORKFLOW_DEFAULTS: Record<string, Record<string, { greenMax: number; amberMax: number }>> = {
@@ -309,6 +313,15 @@ export async function loadTramlThresholds(
         amberMax: c.amberMax,
         // params carries checkpoint-specific overrides (minAmount, currencyMixWindowDays, currencyMixMinDistinct)
         ...(c.params ? (c.params as Partial<CrossBorderThresholds>) : {}),
+      };
+    }
+    if (c.checkpoint.slug === 'geographic-risk-scoring') {
+      result['geographic-risk-scoring'] = {
+        ...GEO_RISK_DEFAULTS,
+        greenMax: c.greenMax,
+        amberMax: c.amberMax,
+        // params carries checkpoint-specific overrides (minAmount, exposureGreenRatio, exposureAmberRatio)
+        ...(c.params ? (c.params as Partial<GeographicRiskThresholds>) : {}),
       };
     }
   }

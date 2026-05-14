@@ -21,12 +21,24 @@ import {
   FRAGMENTED_TRANSACTION_DEFAULTS,
 } from '../checkpoints/fragmented-transactions';
 import type { FragmentedTransactionThresholds } from '../checkpoints/fragmented-transactions';
+import {
+  checkCtrThreshold,
+  CTR_DEFAULTS,
+} from '../checkpoints/ctr-threshold';
+import type { CtrThresholds } from '../checkpoints/ctr-threshold';
+import {
+  checkCrossBorderTransfer,
+  CROSS_BORDER_DEFAULTS,
+} from '../checkpoints/cross-border-transfer';
+import type { CrossBorderThresholds } from '../checkpoints/cross-border-transfer';
 
 export type TramlThresholds = {
   'rapid-inflow-outflow': RapidInflowOutflowThresholds;
   'rapid-movement-of-funds': RapidMovementThresholds;
   'circular-transaction': CircularTransactionThresholds;
   'fragmented-transactions': FragmentedTransactionThresholds;
+  'ctr-threshold': CtrThresholds;
+  'cross-border-transfer': CrossBorderThresholds;
 };
 
 export const TRAML_DEFAULT_THRESHOLDS: TramlThresholds = {
@@ -34,6 +46,8 @@ export const TRAML_DEFAULT_THRESHOLDS: TramlThresholds = {
   'rapid-movement-of-funds': RAPID_MOVEMENT_DEFAULTS,
   'circular-transaction': CIRCULAR_TRANSACTION_DEFAULTS,
   'fragmented-transactions': FRAGMENTED_TRANSACTION_DEFAULTS,
+  'ctr-threshold': CTR_DEFAULTS,
+  'cross-border-transfer': CROSS_BORDER_DEFAULTS,
 };
 
 /** Subset of TRAML_DEFAULT_THRESHOLDS shaped for the shared WORKFLOW_DEFAULTS map in thresholds/service.ts. */
@@ -53,6 +67,14 @@ export const TRAML_THRESHOLD_BANDS: Record<keyof TramlThresholds, { greenMax: nu
   'fragmented-transactions': {
     greenMax: FRAGMENTED_TRANSACTION_DEFAULTS.greenMax,
     amberMax: FRAGMENTED_TRANSACTION_DEFAULTS.amberMax,
+  },
+  'ctr-threshold': {
+    greenMax: CTR_DEFAULTS.greenMax,
+    amberMax: CTR_DEFAULTS.amberMax,
+  },
+  'cross-border-transfer': {
+    greenMax: CROSS_BORDER_DEFAULTS.greenMax,
+    amberMax: CROSS_BORDER_DEFAULTS.amberMax,
   },
 };
 
@@ -80,6 +102,12 @@ export function runTraml(
       : []),
     ...(enabled('fragmented-transactions')
       ? [checkFragmentedTransactions(transactions, resolved['fragmented-transactions'])]
+      : []),
+    ...(enabled('ctr-threshold')
+      ? [checkCtrThreshold(transactions, resolved['ctr-threshold'])]
+      : []),
+    ...(enabled('cross-border-transfer')
+      ? [checkCrossBorderTransfer(transactions, resolved['cross-border-transfer'])]
       : []),
   ];
 

@@ -8,6 +8,7 @@ import {
   detectChannel,
   detectCategory,
   extractBeneficiaryId,
+  detectCountry,
 } from './normalize';
 
 export class CsvParser implements ParserStrategy {
@@ -58,6 +59,16 @@ export class CsvParser implements ParserStrategy {
       if (cols.currency) {
         const cur = row[cols.currency]?.trim();
         if (cur) tx.currency = cur.toUpperCase();
+      }
+
+      // Explicit country column takes priority; fall back to inference.
+      if (cols.country) {
+        const col = row[cols.country]?.trim().toUpperCase();
+        if (col && col.length === 2) tx.country = col;
+      }
+      if (!tx.country) {
+        const inferred = detectCountry(description, tx.currency);
+        if (inferred) tx.country = inferred;
       }
 
       if (cols.reference) {

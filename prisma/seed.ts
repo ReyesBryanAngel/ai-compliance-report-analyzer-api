@@ -91,6 +91,16 @@ const SEED_DATA = [
         name: 'Circular Transaction',
         description: 'Counts outflows that are returned to the account at a matching amount (±5%) within 72 hours — a round-trip / layering indicator.',
       },
+      {
+        slug: 'fragmented-transactions',
+        name: 'Fragmented Transactions',
+        description: 'Counts clusters of sub-threshold outflows to the same recipient that collectively breach the reporting limit within a rolling window — a structuring/smurfing indicator.',
+      },
+      {
+        slug: 'ctr-threshold',
+        name: 'CTR Threshold Detection',
+        description: 'Flags single transactions and same-day aggregates that meet or exceed the Cash Transaction Reporting (CTR) limit per AMLC rules. Supports per-org overrides of singleTxLimit and dailyAggregateLimit via params.',
+      },
     ],
   },
 ];

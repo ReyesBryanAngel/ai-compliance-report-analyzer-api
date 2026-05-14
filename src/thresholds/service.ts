@@ -18,6 +18,18 @@ import {
   CIRCULAR_TRANSACTION_DEFAULTS,
 } from '../risk-engine/checkpoints/circular-transaction';
 import type { CircularTransactionThresholds } from '../risk-engine/checkpoints/circular-transaction';
+import {
+  FRAGMENTED_TRANSACTION_DEFAULTS,
+} from '../risk-engine/checkpoints/fragmented-transactions';
+import type { FragmentedTransactionThresholds } from '../risk-engine/checkpoints/fragmented-transactions';
+import {
+  CTR_DEFAULTS,
+} from '../risk-engine/checkpoints/ctr-threshold';
+import type { CtrThresholds } from '../risk-engine/checkpoints/ctr-threshold';
+import {
+  CROSS_BORDER_DEFAULTS,
+} from '../risk-engine/checkpoints/cross-border-transfer';
+import type { CrossBorderThresholds } from '../risk-engine/checkpoints/cross-border-transfer';
 import type { ThresholdConfigItem } from './types';
 
 const WORKFLOW_DEFAULTS: Record<string, Record<string, { greenMax: number; amberMax: number }>> = {
@@ -270,6 +282,33 @@ export async function loadTramlThresholds(
         amberMax: c.amberMax,
         // params carries checkpoint-specific overrides (windowHours, amountTolerance, minAmount)
         ...(c.params ? (c.params as Partial<CircularTransactionThresholds>) : {}),
+      };
+    }
+    if (c.checkpoint.slug === 'fragmented-transactions') {
+      result['fragmented-transactions'] = {
+        ...FRAGMENTED_TRANSACTION_DEFAULTS,
+        greenMax: c.greenMax,
+        amberMax: c.amberMax,
+        // params carries checkpoint-specific overrides (windowDays, singleTxnCeiling, aggregateFloor, minFragments)
+        ...(c.params ? (c.params as Partial<FragmentedTransactionThresholds>) : {}),
+      };
+    }
+    if (c.checkpoint.slug === 'ctr-threshold') {
+      result['ctr-threshold'] = {
+        ...CTR_DEFAULTS,
+        greenMax: c.greenMax,
+        amberMax: c.amberMax,
+        // params carries checkpoint-specific overrides (singleTxLimit, dailyAggregateLimit)
+        ...(c.params ? (c.params as Partial<CtrThresholds>) : {}),
+      };
+    }
+    if (c.checkpoint.slug === 'cross-border-transfer') {
+      result['cross-border-transfer'] = {
+        ...CROSS_BORDER_DEFAULTS,
+        greenMax: c.greenMax,
+        amberMax: c.amberMax,
+        // params carries checkpoint-specific overrides (minAmount, currencyMixWindowDays, currencyMixMinDistinct)
+        ...(c.params ? (c.params as Partial<CrossBorderThresholds>) : {}),
       };
     }
   }

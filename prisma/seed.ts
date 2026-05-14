@@ -103,6 +103,18 @@ const SEED_DATA = [
       },
     ],
   },
+  {
+    slug: 'document-integrity',
+    name: 'Document Integrity',
+    description: 'Validates that uploaded bank statements are authentic and have not been tampered with.',
+    checkpoints: [
+      {
+        slug: 'statement-balance-discrepancy',
+        name: 'Statement Balance Discrepancy',
+        description: 'Counts transactions where the reported running balance does not match the computed balance from prior transactions — a strong indicator of statement forgery or manipulation.',
+      },
+    ],
+  },
 ];
 
 async function main() {

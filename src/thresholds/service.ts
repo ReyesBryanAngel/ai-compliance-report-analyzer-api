@@ -6,6 +6,8 @@ import { SG_DEFAULT_THRESHOLDS } from '../risk-engine/workflows/sg';
 import type { SgThresholds } from '../risk-engine/workflows/sg';
 import { TRAML_THRESHOLD_BANDS } from '../risk-engine/workflows/traml';
 import type { TramlThresholds } from '../risk-engine/workflows/traml';
+import { DOCUMENT_INTEGRITY_DEFAULT_THRESHOLDS } from '../risk-engine/workflows/document-integrity';
+import type { DocumentIntegrityThresholds } from '../risk-engine/workflows/document-integrity';
 import {
   RAPID_INFLOW_OUTFLOW_DEFAULTS,
 } from '../risk-engine/checkpoints/rapid-inflow-outflow';
@@ -40,6 +42,7 @@ const WORKFLOW_DEFAULTS: Record<string, Record<string, { greenMax: number; amber
   kyc: KYC_DEFAULT_THRESHOLDS,
   sg: SG_DEFAULT_THRESHOLDS,
   traml: TRAML_THRESHOLD_BANDS,
+  'document-integrity': DOCUMENT_INTEGRITY_DEFAULT_THRESHOLDS,
 };
 
 type CheckpointRow = {
@@ -242,6 +245,25 @@ export async function loadSgThresholds(
   const result: Partial<SgThresholds> = {};
   for (const c of configs) {
     const slug = c.checkpoint.slug as keyof SgThresholds;
+    result[slug] = { greenMax: c.greenMax, amberMax: c.amberMax };
+  }
+  return result;
+}
+
+export async function loadDocumentIntegrityThresholds(
+  prisma: PrismaClient,
+  orgId: string | null,
+): Promise<Partial<DocumentIntegrityThresholds>> {
+  if (!orgId) return {};
+
+  const configs = await prisma.orgThresholdConfig.findMany({
+    where: { organizationId: orgId, checkpoint: { workflow: { slug: 'document-integrity' } } },
+    include: { checkpoint: true },
+  });
+
+  const result: Partial<DocumentIntegrityThresholds> = {};
+  for (const c of configs) {
+    const slug = c.checkpoint.slug as keyof DocumentIntegrityThresholds;
     result[slug] = { greenMax: c.greenMax, amberMax: c.amberMax };
   }
   return result;

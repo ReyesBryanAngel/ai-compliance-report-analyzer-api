@@ -8,6 +8,8 @@ import { loadKycThresholds, loadSgThresholds, loadTramlThresholds } from '../thr
 import type {
   GenerateReportBody,
   GenerateReportResponse,
+  ListReportBatch,
+  ListReportDocument,
   ListReportItem,
   ReportCheckItem,
   ReportSummary,
@@ -210,10 +212,23 @@ export async function generateReport(
     const summary = buildSummary(riskReport.workflows, documents.length, allTransactions.length);
     const narrative = await generateNarrative(riskReport, summary);
 
+    const documentNames: Record<string, string> = Object.fromEntries(
+      documents.map((d) => [d.id, d.originalName]),
+    );
+
+    const batchIds = [...new Set(documents.map((d) => d.batchId).filter(Boolean) as string[])];
+    const batchRecords = batchIds.length > 0
+      ? await prisma.documentBatch.findMany({
+          where: { id: { in: batchIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const batches: ListReportBatch[] = batchRecords.map((b) => ({ id: b.id, name: b.name }));
+
     await prisma.report.update({
       where: { id: report.id },
       data: {
-        content: JSON.stringify({ summary, riskReport, narrative }),
+        content: JSON.stringify({ summary, riskReport, narrative, documentNames, batches }),
         status: 'COMPLETED',
       },
     });
@@ -281,9 +296,13 @@ export async function getReport(
 export async function listReports(
   prisma: PrismaClient,
   organizationId: string | null,
+  workflow?: string,
 ): Promise<ListReportItem[]> {
   const reports = await prisma.report.findMany({
-    where: organizationId ? { organizationId } : {},
+    where: {
+      ...(organizationId ? { organizationId } : {}),
+      ...(workflow ? { workflows: { has: workflow } } : {}),
+    },
     orderBy: { createdAt: 'desc' },
     select: {
       id: true,
@@ -296,13 +315,66 @@ export async function listReports(
     },
   });
 
-  return reports.map((r) => {
-    const parsed = r.content ? JSON.parse(r.content) : null;
+  const parsedContents = reports.map((r) => (r.content ? JSON.parse(r.content) : null));
+
+  // Collect document IDs not covered by stored documentNames (old reports pre-dating this field)
+  const uncoveredDocIds = new Set<string>();
+  reports.forEach((r, i) => {
+    const stored: Record<string, string> | undefined = parsedContents[i]?.documentNames;
+    r.documentIds.forEach((id) => {
+      if (!stored?.[id]) uncoveredDocIds.add(id);
+    });
+  });
+
+  const fallbackDocMap = new Map<string, string>();
+  const fallbackBatchMap = new Map<string, ListReportBatch[]>();
+
+  if (uncoveredDocIds.size > 0) {
+    const docRecords = await prisma.document.findMany({
+      where: { id: { in: [...uncoveredDocIds] } },
+      select: { id: true, originalName: true, batchId: true },
+    });
+    docRecords.forEach((d) => fallbackDocMap.set(d.id, d.originalName));
+
+    const fallbackBatchIds = [...new Set(docRecords.map((d) => d.batchId).filter(Boolean) as string[])];
+    if (fallbackBatchIds.length > 0) {
+      const batchRecords = await prisma.documentBatch.findMany({
+        where: { id: { in: fallbackBatchIds } },
+        select: { id: true, name: true },
+      });
+      const batchById = new Map(batchRecords.map((b) => [b.id, b]));
+
+      // Group batches per report for the fallback path
+      reports.forEach((r, i) => {
+        if (parsedContents[i]?.batches) return; // already stored — skip
+        const batchesForReport = new Map<string, ListReportBatch>();
+        r.documentIds.forEach((docId) => {
+          const doc = docRecords.find((d) => d.id === docId);
+          if (doc?.batchId) {
+            const b = batchById.get(doc.batchId);
+            if (b && !batchesForReport.has(b.id)) batchesForReport.set(b.id, b);
+          }
+        });
+        fallbackBatchMap.set(r.id, [...batchesForReport.values()]);
+      });
+    }
+  }
+
+  return reports.map((r, i) => {
+    const parsed = parsedContents[i];
+    const storedNames: Record<string, string> | undefined = parsed?.documentNames;
+    const documents: ListReportDocument[] = r.documentIds.map((id) => ({
+      id,
+      fileName: storedNames?.[id] ?? fallbackDocMap.get(id) ?? id,
+    }));
+    const batches: ListReportBatch[] = parsed?.batches ?? fallbackBatchMap.get(r.id) ?? [];
     return {
       id: r.id,
       title: r.title ?? '',
       status: r.status,
       documentIds: r.documentIds,
+      documents,
+      batches,
       workflows: r.workflows,
       summary: parsed?.summary ?? null,
       createdAt: r.createdAt.toISOString(),

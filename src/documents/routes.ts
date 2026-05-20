@@ -17,6 +17,16 @@ const documentSchema = {
     size:           { type: 'number' },
     status:         { type: 'string' },
     batchId:        { type: 'string', nullable: true },
+    batch: {
+      type: 'object',
+      nullable: true,
+      properties: {
+        id:          { type: 'string' },
+        name:        { type: 'string' },
+        description: { type: 'string', nullable: true },
+        createdAt:   { type: 'string' },
+      },
+    },
     uploadedById:   { type: 'string', nullable: true },
     organizationId: { type: 'string', nullable: true },
     createdAt:      { type: 'string' },
@@ -149,6 +159,14 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
         size: true,
         status: true,
         batchId: true,
+        batch: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            createdAt: true,
+          },
+        },
         uploadedById: true,
         organizationId: true,
         createdAt: true,
@@ -156,7 +174,11 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
     });
 
     return reply.send({
-      documents: documents.map((d) => ({ ...d, createdAt: d.createdAt.toISOString() })),
+      documents: documents.map((d) => ({
+        ...d,
+        createdAt: d.createdAt.toISOString(),
+        batch: d.batch ? { ...d.batch, createdAt: d.batch.createdAt.toISOString() } : null,
+      })),
     });
   });
 

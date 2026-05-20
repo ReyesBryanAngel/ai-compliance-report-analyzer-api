@@ -38,11 +38,23 @@ export interface GenerateReportResponse {
   createdAt: string;
 }
 
+export interface ListReportDocument {
+  id: string;
+  fileName: string;
+}
+
+export interface ListReportBatch {
+  id: string;
+  name: string;
+}
+
 export interface ListReportItem {
   id: string;
   title: string;
   status: string;
   documentIds: string[];
+  documents: ListReportDocument[];
+  batches: ListReportBatch[];
   workflows: string[];
   summary: ReportSummary | null;
   createdAt: string;

@@ -153,11 +153,21 @@ const reportRoutes: FastifyPluginAsync = async (server) => {
     }
   });
 
-  server.get<{ Reply: { reports: ListReportItem[] } }>('/list', {
+  server.get<{ Querystring: { workflow?: string }; Reply: { reports: ListReportItem[] } }>('/list', {
     onRequest: [server.authenticate],
     schema: {
       tags: ['Reports'],
       summary: 'List all compliance reports for the authenticated organization',
+      querystring: {
+        type: 'object',
+        properties: {
+          workflow: {
+            type: 'string',
+            enum: [...SUPPORTED_WORKFLOWS],
+            description: 'Filter reports by workflow name',
+          },
+        },
+      },
       response: {
         200: {
           type: 'object',
@@ -171,6 +181,26 @@ const reportRoutes: FastifyPluginAsync = async (server) => {
                   title:       { type: 'string' },
                   status:      { type: 'string' },
                   documentIds: { type: 'array', items: { type: 'string' } },
+                  documents: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id:       { type: 'string' },
+                        fileName: { type: 'string' },
+                      },
+                    },
+                  },
+                  batches: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id:   { type: 'string' },
+                        name: { type: 'string' },
+                      },
+                    },
+                  },
                   workflows:   { type: 'array', items: { type: 'string' } },
                   summary:     { ...summarySchema, nullable: true },
                   createdAt:   { type: 'string' },
@@ -183,7 +213,8 @@ const reportRoutes: FastifyPluginAsync = async (server) => {
     },
   }, async (request, reply) => {
     const orgId = request.user.organizationId || null;
-    const reports = await listReports(server.prisma, orgId);
+    const { workflow } = request.query;
+    const reports = await listReports(server.prisma, orgId, workflow);
     return reply.send({ reports });
   });
 };

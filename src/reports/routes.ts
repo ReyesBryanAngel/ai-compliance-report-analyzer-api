@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { generateReport, getReport, listReports } from './service';
 import { SUPPORTED_WORKFLOWS } from '../risk-engine';
-import type { GenerateReportBody, GenerateReportResponse, ListReportItem } from './types';
+import type { GenerateReportBatchResponse, GenerateReportBody, GenerateReportResponse, ListReportItem } from './types';
 
 const transactionSchema = {
   type: 'object',
@@ -76,7 +76,7 @@ const reportResponseSchema = {
 };
 
 const reportRoutes: FastifyPluginAsync = async (server) => {
-  server.post<{ Body: GenerateReportBody; Reply: GenerateReportResponse }>('/generate', {
+  server.post<{ Body: GenerateReportBody; Reply: GenerateReportBatchResponse }>('/generate', {
     onRequest: [server.authenticate],
     schema: {
       tags: ['Reports'],
@@ -108,7 +108,14 @@ const reportRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      response: { 200: reportResponseSchema },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            reports: { type: 'array', items: reportResponseSchema },
+          },
+        },
+      },
     },
   }, async (request, reply) => {
     try {

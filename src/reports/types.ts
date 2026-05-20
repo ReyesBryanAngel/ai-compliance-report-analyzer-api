@@ -38,6 +38,10 @@ export interface GenerateReportResponse {
   createdAt: string;
 }
 
+export interface GenerateReportBatchResponse {
+  reports: GenerateReportResponse[];
+}
+
 export interface ListReportDocument {
   id: string;
   fileName: string;

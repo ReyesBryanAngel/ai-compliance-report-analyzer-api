@@ -1,11 +1,11 @@
 import type { PrismaClient } from '../generated/prisma/client';
 import { getParser } from '../parser';
-import type { NormalizedTransaction } from '../parser/types';
 import { runRiskEngine, SUPPORTED_WORKFLOWS } from '../risk-engine';
 import type { WorkflowResult } from '../risk-engine/types';
 import { generateNarrative } from '../llm/service';
 import { loadKycThresholds, loadSgThresholds, loadTramlThresholds } from '../thresholds/service';
 import type {
+  GenerateReportBatchResponse,
   GenerateReportBody,
   GenerateReportResponse,
   ListReportBatch,
@@ -59,12 +59,117 @@ async function resolveEnabledCheckpoints(
   return new Set(checkpoints.map((cp) => cp.slug));
 }
 
+async function generateSingleReport(
+  doc: { id: string; mimeType: string; path: string; originalName: string; batchId: string | null },
+  workflows: string[],
+  prisma: PrismaClient,
+  userId: string,
+  organizationId: string | null,
+  enabledCheckpoints: Set<string>,
+  thresholds: Record<string, unknown>,
+  titleOverride?: string,
+): Promise<GenerateReportResponse> {
+  const dateStr = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const reportTitle = titleOverride
+    ? `${titleOverride} — ${doc.originalName}`
+    : `Compliance Report — ${doc.originalName} — ${dateStr}`;
+
+  const report = await prisma.report.create({
+    data: {
+      title: reportTitle,
+      status: 'ANALYZING',
+      documentIds: [doc.id],
+      workflows,
+      userId,
+      ...(organizationId ? { organizationId } : {}),
+    },
+  });
+
+  try {
+    const parser = getParser(doc.mimeType)!;
+    const { transactions } = await parser.parse(doc.path);
+
+    const riskReport = runRiskEngine(transactions, workflows, { thresholds, enabledCheckpoints });
+
+    const savedChecks: ReportCheckItem[] = [];
+    for (const wfResult of riskReport.workflows) {
+      for (const finding of wfResult.findings) {
+        const check = await prisma.complianceCheck.create({
+          data: {
+            reportId: report.id,
+            rule: finding.checkpoint,
+            passed: !finding.triggered,
+            details: JSON.stringify({
+              workflow: wfResult.workflow,
+              severity: finding.severity,
+              score: finding.score,
+              reason: finding.reason,
+              evidenceCount: finding.evidence.length,
+            }),
+          },
+        });
+        savedChecks.push({
+          id: check.id,
+          rule: check.rule,
+          passed: check.passed,
+          details: check.details,
+        });
+      }
+    }
+
+    const summary = buildSummary(riskReport.workflows, 1, transactions.length);
+    const narrative = await generateNarrative(riskReport, summary);
+
+    const documentNames: Record<string, string> = { [doc.id]: doc.originalName };
+
+    let batches: ListReportBatch[] = [];
+    if (doc.batchId) {
+      const batchRecord = await prisma.documentBatch.findUnique({
+        where: { id: doc.batchId },
+        select: { id: true, name: true },
+      });
+      if (batchRecord) batches = [{ id: batchRecord.id, name: batchRecord.name }];
+    }
+
+    await prisma.report.update({
+      where: { id: report.id },
+      data: {
+        content: JSON.stringify({ summary, riskReport, narrative, documentNames, batches }),
+        status: 'COMPLETED',
+      },
+    });
+
+    return {
+      id: report.id,
+      title: reportTitle,
+      status: 'COMPLETED',
+      documentIds: [doc.id],
+      workflows,
+      results: riskReport.workflows,
+      checks: savedChecks,
+      summary,
+      narrative,
+      createdAt: report.createdAt.toISOString(),
+    };
+  } catch (err) {
+    await prisma.report.update({
+      where: { id: report.id },
+      data: { status: 'FAILED' },
+    });
+    throw err;
+  }
+}
+
 export async function generateReport(
   body: GenerateReportBody,
   prisma: PrismaClient,
   userId: string,
   organizationId: string | null,
-): Promise<GenerateReportResponse> {
+): Promise<GenerateReportBatchResponse> {
   const { workflows, document_ids, batch_id, title } = body;
 
   // Validate workflows
@@ -146,112 +251,30 @@ export async function generateReport(
     );
   }
 
-  const reportTitle =
-    title ??
-    `Compliance Report — ${new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })}`;
+  // Resolve shared config once for all documents
+  const enabledCheckpoints = await resolveEnabledCheckpoints(prisma, workflows, organizationId);
+  const thresholds = {
+    ...(workflows.includes('kyc') ? { kyc: await loadKycThresholds(prisma, organizationId) } : {}),
+    ...(workflows.includes('sg') ? { sg: await loadSgThresholds(prisma, organizationId) } : {}),
+    ...(workflows.includes('traml') ? { traml: await loadTramlThresholds(prisma, organizationId) } : {}),
+  };
 
-  const report = await prisma.report.create({
-    data: {
-      title: reportTitle,
-      status: 'ANALYZING',
-      documentIds: resolvedIds,
+  const reports: GenerateReportResponse[] = [];
+  for (const doc of documents) {
+    const result = await generateSingleReport(
+      doc,
       workflows,
+      prisma,
       userId,
-      ...(organizationId ? { organizationId } : {}),
-    },
-  });
-
-  try {
-    const allTransactions: NormalizedTransaction[] = [];
-
-    for (const doc of documents) {
-      const parser = getParser(doc.mimeType)!;
-      const { transactions } = await parser.parse(doc.path);
-      allTransactions.push(...transactions);
-    }
-
-    const enabledCheckpoints = await resolveEnabledCheckpoints(prisma, workflows, organizationId);
-
-    const thresholds = {
-      ...(workflows.includes('kyc') ? { kyc: await loadKycThresholds(prisma, organizationId) } : {}),
-      ...(workflows.includes('sg') ? { sg: await loadSgThresholds(prisma, organizationId) } : {}),
-      ...(workflows.includes('traml') ? { traml: await loadTramlThresholds(prisma, organizationId) } : {}),
-    };
-    const riskReport = runRiskEngine(allTransactions, workflows, { thresholds, enabledCheckpoints });
-
-    const savedChecks: ReportCheckItem[] = [];
-    for (const wfResult of riskReport.workflows) {
-      for (const finding of wfResult.findings) {
-        const check = await prisma.complianceCheck.create({
-          data: {
-            reportId: report.id,
-            rule: finding.checkpoint,
-            passed: !finding.triggered,
-            details: JSON.stringify({
-              workflow: wfResult.workflow,
-              severity: finding.severity,
-              score: finding.score,
-              reason: finding.reason,
-              evidenceCount: finding.evidence.length,
-            }),
-          },
-        });
-        savedChecks.push({
-          id: check.id,
-          rule: check.rule,
-          passed: check.passed,
-          details: check.details,
-        });
-      }
-    }
-
-    const summary = buildSummary(riskReport.workflows, documents.length, allTransactions.length);
-    const narrative = await generateNarrative(riskReport, summary);
-
-    const documentNames: Record<string, string> = Object.fromEntries(
-      documents.map((d) => [d.id, d.originalName]),
+      organizationId,
+      enabledCheckpoints,
+      thresholds,
+      title,
     );
-
-    const batchIds = [...new Set(documents.map((d) => d.batchId).filter(Boolean) as string[])];
-    const batchRecords = batchIds.length > 0
-      ? await prisma.documentBatch.findMany({
-          where: { id: { in: batchIds } },
-          select: { id: true, name: true },
-        })
-      : [];
-    const batches: ListReportBatch[] = batchRecords.map((b) => ({ id: b.id, name: b.name }));
-
-    await prisma.report.update({
-      where: { id: report.id },
-      data: {
-        content: JSON.stringify({ summary, riskReport, narrative, documentNames, batches }),
-        status: 'COMPLETED',
-      },
-    });
-
-    return {
-      id: report.id,
-      title: reportTitle,
-      status: 'COMPLETED',
-      documentIds: resolvedIds,
-      workflows,
-      results: riskReport.workflows,
-      checks: savedChecks,
-      summary,
-      narrative,
-      createdAt: report.createdAt.toISOString(),
-    };
-  } catch (err) {
-    await prisma.report.update({
-      where: { id: report.id },
-      data: { status: 'FAILED' },
-    });
-    throw err;
+    reports.push(result);
   }
+
+  return { reports };
 }
 
 export async function getReport(

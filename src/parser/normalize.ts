@@ -36,6 +36,10 @@ const REFERENCE_ALIASES = [
   'trace no', 'receipt no',
 ];
 
+const DIRECTION_ALIASES = [
+  'direction', 'type', 'transaction type', 'txn type', 'trans type', 'dr/cr', 'cr/dr',
+];
+
 const CURRENCY_ALIASES = [
   'currency', 'ccy', 'cur',
 ];
@@ -64,6 +68,7 @@ export function detectColumns(headers: string[]) {
     amount:      findColumn(headers, AMOUNT_ALIASES),
     debit:       findColumn(headers, DEBIT_ALIASES),
     credit:      findColumn(headers, CREDIT_ALIASES),
+    direction:   findColumn(headers, DIRECTION_ALIASES),
     balance:     findColumn(headers, BALANCE_ALIASES),
     reference:   findColumn(headers, REFERENCE_ALIASES),
     currency:    findColumn(headers, CURRENCY_ALIASES),

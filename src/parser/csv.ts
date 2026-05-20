@@ -106,10 +106,21 @@ export class CsvParser implements ParserStrategy {
       return { amount: null } as never;
     }
 
-    // Strategy 2: single amount column — sign determines direction
+    // Strategy 2: single amount column — explicit direction column takes priority over sign
     if (cols.amount) {
       const raw = parseAmount(row[cols.amount]);
       if (raw === null) return { amount: null } as never;
+
+      if (cols.direction) {
+        const dirRaw = row[cols.direction]?.trim().toLowerCase();
+        if (dirRaw === 'outflow' || dirRaw === 'debit' || dirRaw === 'dr') {
+          return { amount: Math.abs(raw), direction: 'outflow' };
+        }
+        if (dirRaw === 'inflow' || dirRaw === 'credit' || dirRaw === 'cr') {
+          return { amount: Math.abs(raw), direction: 'inflow' };
+        }
+      }
+
       return {
         amount: Math.abs(raw),
         direction: raw < 0 ? 'outflow' : 'inflow',

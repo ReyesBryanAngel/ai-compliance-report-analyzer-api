@@ -1,5 +1,6 @@
 import { createReadStream } from 'fs';
 import { parse } from 'csv-parse';
+import type { Readable } from 'stream';
 import type { ParserStrategy, NormalizedTransaction } from './types';
 import {
   detectColumns,
@@ -13,7 +14,11 @@ import {
 
 export class CsvParser implements ParserStrategy {
   async parse(filePath: string): Promise<{ transactions: NormalizedTransaction[]; skipped: number }> {
-    const rows: Record<string, string>[] = await this.readCsv(filePath);
+    return this.parseStream(createReadStream(filePath));
+  }
+
+  async parseStream(stream: Readable): Promise<{ transactions: NormalizedTransaction[]; skipped: number }> {
+    const rows: Record<string, string>[] = await this.readCsvStream(stream);
     if (rows.length === 0) return { transactions: [], skipped: 0 };
 
     const headers = Object.keys(rows[0]);
@@ -130,7 +135,7 @@ export class CsvParser implements ParserStrategy {
     return { amount: null } as never;
   }
 
-  private readCsv(filePath: string): Promise<Record<string, string>[]> {
+  private readCsvStream(stream: Readable): Promise<Record<string, string>[]> {
     return new Promise((resolve, reject) => {
       const records: Record<string, string>[] = [];
       const parser = parse({ columns: true, skip_empty_lines: true, trim: true, relax_column_count: true });
@@ -145,7 +150,7 @@ export class CsvParser implements ParserStrategy {
       parser.on('error', reject);
       parser.on('end', () => resolve(records));
 
-      createReadStream(filePath).pipe(parser);
+      stream.pipe(parser);
     });
   }
 }

@@ -101,6 +101,21 @@ const SEED_DATA = [
         name: 'CTR Threshold Detection',
         description: 'Flags single transactions and same-day aggregates that meet or exceed the Cash Transaction Reporting (CTR) limit per AMLC rules. Supports per-org overrides of singleTxLimit and dailyAggregateLimit via params.',
       },
+      {
+        slug: 'cross-border-transfer',
+        name: 'Cross-Border Transfer',
+        description: 'Flags transactions involving high-risk foreign jurisdictions and detects multi-currency mixing patterns within a rolling window — indicators of offshore layering.',
+      },
+      {
+        slug: 'geographic-risk-scoring',
+        name: 'Geographic Risk Scoring',
+        description: 'Computes a weighted exposure ratio of transaction value flowing through elevated-risk jurisdictions to surface geographic concentration risk.',
+      },
+      {
+        slug: 'sanctions-watchlist',
+        name: 'Sanctions Watchlist',
+        description: 'Matches transaction descriptions against a curated sanctions and watchlist database to flag dealings with prohibited entities or individuals.',
+      },
     ],
   },
   {
@@ -112,6 +127,16 @@ const SEED_DATA = [
         slug: 'statement-balance-discrepancy',
         name: 'Statement Balance Discrepancy',
         description: 'Counts transactions where the reported running balance does not match the computed balance from prior transactions — a strong indicator of statement forgery or manipulation.',
+      },
+      {
+        slug: 'amount-digit-distribution',
+        name: 'Amount Digit Distribution',
+        description: "Applies Benford's Law to transaction amounts to detect digit-frequency anomalies that suggest fabricated or manipulated figures.",
+      },
+      {
+        slug: 'cloned-transaction-pattern',
+        name: 'Cloned Transaction Pattern',
+        description: 'Detects duplicate transactions sharing the same amount, description, and direction within a short window — a common artifact of statement forgery where only reference codes are incremented.',
       },
     ],
   },

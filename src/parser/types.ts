@@ -23,6 +23,9 @@ export type ParseResult = {
   };
 };
 
+import type { Readable } from 'stream';
+
 export interface ParserStrategy {
   parse(filePath: string): Promise<{ transactions: NormalizedTransaction[]; skipped: number }>;
+  parseStream(stream: Readable): Promise<{ transactions: NormalizedTransaction[]; skipped: number }>;
 }

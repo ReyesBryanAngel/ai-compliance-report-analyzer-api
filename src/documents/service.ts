@@ -1,19 +1,22 @@
-import { pipeline } from 'stream/promises';
-import { createWriteStream } from 'fs';
-import { mkdir } from 'fs/promises';
-import { join, extname } from 'path';
+import { extname } from 'path';
 import { randomUUID } from 'crypto';
 import { Transform } from 'stream';
+import type { Readable } from 'stream';
 import type { MultipartFile } from '@fastify/multipart';
 import type { PrismaClient } from '../generated/prisma/client';
 import { ALLOWED_MIME_TYPES, type BatchInfo, type UploadedDocument } from './types';
 import { getParser, type ParseResult } from '../parser';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { Upload } from '@aws-sdk/lib-storage';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-// Swap this path for an S3 bucket key prefix when migrating to cloud storage
-const UPLOAD_DIR = join(process.cwd(), 'uploads', 'documents');
+const s3 = new S3Client({ region: process.env.AWS_REGION });
+const BUCKET = process.env.S3_BUCKET_NAME!;
+const KEY_PREFIX = process.env.S3_KEY_PREFIX ?? 'documents/';
+const DOWNLOAD_URL_TTL = 3600; // 1 hour
 
-export async function ensureUploadDir(): Promise<void> {
-  await mkdir(UPLOAD_DIR, { recursive: true });
+export async function getDownloadUrl(s3Key: string): Promise<string> {
+  return getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET, Key: s3Key }), { expiresIn: DOWNLOAD_URL_TTL });
 }
 
 export async function createDocumentBatch(
@@ -45,7 +48,7 @@ export async function saveDocument(
 
   const ext = extname(part.filename);
   const storedName = `${randomUUID()}${ext}`;
-  const filePath = join(UPLOAD_DIR, storedName);
+  const s3Key = `${KEY_PREFIX}${storedName}`;
 
   let size = 0;
   const sizeCounter = new Transform({
@@ -55,7 +58,15 @@ export async function saveDocument(
     },
   });
 
-  await pipeline(part.file, sizeCounter, createWriteStream(filePath));
+  await new Upload({
+    client: s3,
+    params: {
+      Bucket: BUCKET,
+      Key: s3Key,
+      Body: part.file.pipe(sizeCounter),
+      ContentType: part.mimetype,
+    },
+  }).done();
 
   const doc = await prisma.document.create({
     data: {
@@ -63,7 +74,7 @@ export async function saveDocument(
       storedName,
       mimeType: part.mimetype,
       size,
-      path: filePath,
+      path: s3Key,
       status: 'COMPLETED',
       batchId: batchId ?? null,
       uploadedById: uploadedById ?? null,
@@ -94,8 +105,12 @@ export async function parseDocument(documentId: string, prisma: PrismaClient): P
   await prisma.document.update({ where: { id: documentId }, data: { status: 'PROCESSING' } });
 
   try {
-    const { transactions, skipped } = await parser.parse(doc.path);
-    await prisma.document.update({ where: { id: documentId }, data: { status: 'PROCESSED' } });
+    const { Body } = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: doc.path }));
+    const { transactions, skipped } = await parser.parseStream(Body as Readable);
+    await prisma.document.update({
+      where: { id: documentId },
+      data: { status: 'PROCESSED', parsedData: transactions },
+    });
 
     return {
       transactions,

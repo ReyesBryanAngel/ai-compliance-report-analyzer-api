@@ -92,6 +92,7 @@ model Document {
   size           Int
   path           String
   status         DocumentStatus @default(PENDING)
+  parsedData     Json?
   batchId        String?
   batch          DocumentBatch? @relation(fields: [batchId], references: [id])
   uploadedById   String?

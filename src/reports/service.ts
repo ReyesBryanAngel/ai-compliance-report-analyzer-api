@@ -1,6 +1,6 @@
 import type { PrismaClient } from '../generated/prisma/client';
-import { getParser } from '../parser';
 import { runRiskEngine, SUPPORTED_WORKFLOWS } from '../risk-engine';
+import type { NormalizedTransaction } from '../parser/types';
 import type { WorkflowResult } from '../risk-engine/types';
 import { generateNarrative } from '../llm/service';
 import { loadKycThresholds, loadSgThresholds, loadTramlThresholds } from '../thresholds/service';
@@ -68,7 +68,8 @@ async function resolveEnabledCheckpoints(
 }
 
 async function generateSingleReport(
-  doc: { id: string; mimeType: string; path: string; originalName: string; batchId: string | null },
+  doc: { id: string; originalName: string; batchId: string | null },
+  transactions: NormalizedTransaction[],
   workflows: string[],
   prisma: PrismaClient,
   userId: string,
@@ -98,8 +99,6 @@ async function generateSingleReport(
   });
 
   try {
-    const parser = getParser(doc.mimeType)!;
-    const { transactions } = await parser.parse(doc.path);
 
     const riskReport = runRiskEngine(transactions, workflows, { thresholds, enabledCheckpoints });
 
@@ -237,25 +236,23 @@ export async function generateReport(
     });
   }
 
-  const notReady = documents.filter(
-    (d) => d.status !== 'COMPLETED' && d.status !== 'PROCESSED',
-  );
+  const notReady = documents.filter((d) => d.status !== 'PROCESSED');
   if (notReady.length > 0) {
     throw Object.assign(
       new Error(
-        `Documents not ready for analysis (status must be COMPLETED or PROCESSED): ${notReady.map((d) => `${d.id} [${d.status}]`).join(', ')}`,
+        `Documents not ready for analysis (status must be PROCESSED): ${notReady.map((d) => `${d.id} [${d.status}]`).join(', ')}`,
       ),
       { code: 'NOT_READY' },
     );
   }
 
-  const unparseable = documents.filter((d) => !getParser(d.mimeType));
-  if (unparseable.length > 0) {
+  const missingParsedData = documents.filter((d) => !d.parsedData);
+  if (missingParsedData.length > 0) {
     throw Object.assign(
       new Error(
-        `No parser available for: ${unparseable.map((d) => `${d.originalName} (${d.mimeType})`).join(', ')}`,
+        `Documents have no parsed data: ${missingParsedData.map((d) => d.id).join(', ')}`,
       ),
-      { code: 'UNSUPPORTED_MIME' },
+      { code: 'NOT_READY' },
     );
   }
 
@@ -273,8 +270,11 @@ export async function generateReport(
   async function worker() {
     while (idx < documents.length) {
       const i = idx++;
+      const doc = documents[i];
+      const transactions = doc.parsedData as NormalizedTransaction[];
       results[i] = await generateSingleReport(
-        documents[i],
+        doc,
+        transactions,
         workflows,
         prisma,
         userId,

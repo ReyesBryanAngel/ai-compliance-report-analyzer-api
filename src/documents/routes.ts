@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import { ensureUploadDir, saveDocument, parseDocument, createDocumentBatch } from './service';
+import { saveDocument, parseDocument, createDocumentBatch, getDownloadUrl } from './service';
 import type { UploadResponse, UploadedDocument, BatchInfo } from './types';
 import type { ParseResult } from '../parser';
 
@@ -30,12 +30,11 @@ const documentSchema = {
     uploadedById:   { type: 'string', nullable: true },
     organizationId: { type: 'string', nullable: true },
     createdAt:      { type: 'string' },
+    downloadUrl:    { type: 'string' },
   },
 };
 
 const documentRoutes: FastifyPluginAsync = async (server) => {
-  await ensureUploadDir();
-
   server.post<{ Reply: UploadResponse }>('/upload', {
     onRequest: [server.authenticate],
     schema: {
@@ -88,6 +87,9 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
       try {
         const doc = await saveDocument(part, server.prisma, uploadedById, orgId);
         uploaded.push(doc);
+        parseDocument(doc.id, server.prisma).catch((err: unknown) => {
+          server.log.error({ docId: doc.id, err }, 'Background parse failed');
+        });
       } catch (err) {
         part.file.resume();
         failed.push({
@@ -158,6 +160,7 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
         mimeType: true,
         size: true,
         status: true,
+        path: true,
         batchId: true,
         batch: {
           select: {
@@ -173,13 +176,16 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
       },
     });
 
-    return reply.send({
-      documents: documents.map((d) => ({
+    const documentsWithUrls = await Promise.all(
+      documents.map(async (d) => ({
         ...d,
         createdAt: d.createdAt.toISOString(),
         batch: d.batch ? { ...d.batch, createdAt: d.batch.createdAt.toISOString() } : null,
+        downloadUrl: await getDownloadUrl(d.path),
       })),
-    });
+    );
+
+    return reply.send({ documents: documentsWithUrls });
   });
 
   server.get<{ Params: { id: string } }>('/:id', {
@@ -209,6 +215,7 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
         mimeType: true,
         size: true,
         status: true,
+        path: true,
         batchId: true,
         uploadedById: true,
         organizationId: true,
@@ -218,7 +225,8 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
 
     if (!doc) return reply.notFound('Document not found');
 
-    return reply.send({ ...doc, createdAt: doc.createdAt.toISOString() });
+    const downloadUrl = await getDownloadUrl(doc.path);
+    return reply.send({ ...doc, createdAt: doc.createdAt.toISOString(), downloadUrl });
   });
 
   server.post<{ Params: { id: string }; Reply: ParseResult }>('/:id/parse', {

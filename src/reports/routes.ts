@@ -42,6 +42,7 @@ const workflowResultSchema = {
 const summarySchema = {
   type: 'object',
   properties: {
+    severity:          { type: 'string', enum: ['none', 'low', 'medium', 'high'] },
     totalDocuments:    { type: 'number' },
     totalTransactions: { type: 'number' },
     overallRiskScore:  { type: 'number' },

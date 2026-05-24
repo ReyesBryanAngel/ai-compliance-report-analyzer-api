@@ -4,4 +4,6 @@ dist/
 *.js.map
 /src/generated/prisma
 .env.example
+uploads/
+samples/
 .env

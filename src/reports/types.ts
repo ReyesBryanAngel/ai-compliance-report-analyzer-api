@@ -11,6 +11,7 @@ export interface GenerateReportBody {
 }
 
 export interface ReportSummary {
+  severity: 'low' | 'medium' | 'high' | 'none';
   totalDocuments: number;
   totalTransactions: number;
   overallRiskScore: number;

@@ -21,16 +21,24 @@ function buildSummary(
   totalTransactions: number,
 ): ReportSummary {
   const allFindings = workflowResults.flatMap((w) => w.findings);
+  const triggeredFindings = allFindings.filter((f) => f.triggered);
   const overallRiskScore =
     workflowResults.length > 0
       ? Math.max(...workflowResults.map((w) => w.overallScore))
       : 0;
 
+  const severityRank: Record<string, number> = { none: -1, low: 0, medium: 1, high: 2 };
+  const severity: ReportSummary['severity'] = triggeredFindings.reduce<ReportSummary['severity']>(
+    (worst, f) => ((severityRank[f.severity] ?? -1) > severityRank[worst] ? f.severity as ReportSummary['severity'] : worst),
+    'none',
+  );
+
   return {
+    severity,
     totalDocuments,
     totalTransactions,
     overallRiskScore,
-    triggeredChecks: allFindings.filter((f) => f.triggered).length,
+    triggeredChecks: triggeredFindings.length,
     highRiskFindings: allFindings.filter((f) => f.severity === 'high').length,
   };
 }
@@ -259,22 +267,27 @@ export async function generateReport(
     ...(workflows.includes('traml') ? { traml: await loadTramlThresholds(prisma, organizationId) } : {}),
   };
 
-  const reports: GenerateReportResponse[] = [];
-  for (const doc of documents) {
-    const result = await generateSingleReport(
-      doc,
-      workflows,
-      prisma,
-      userId,
-      organizationId,
-      enabledCheckpoints,
-      thresholds,
-      title,
-    );
-    reports.push(result);
+  const CONCURRENCY = 3;
+  const results: GenerateReportResponse[] = new Array(documents.length);
+  let idx = 0;
+  async function worker() {
+    while (idx < documents.length) {
+      const i = idx++;
+      results[i] = await generateSingleReport(
+        documents[i],
+        workflows,
+        prisma,
+        userId,
+        organizationId,
+        enabledCheckpoints,
+        thresholds,
+        title,
+      );
+    }
   }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, documents.length) }, worker));
 
-  return { reports };
+  return { reports: results };
 }
 
 export async function getReport(
@@ -383,6 +396,8 @@ export async function listReports(
     }
   }
 
+  const severityRank: Record<string, number> = { none: -1, low: 0, medium: 1, high: 2 };
+
   return reports.map((r, i) => {
     const parsed = parsedContents[i];
     const storedNames: Record<string, string> | undefined = parsed?.documentNames;
@@ -391,6 +406,18 @@ export async function listReports(
       fileName: storedNames?.[id] ?? fallbackDocMap.get(id) ?? id,
     }));
     const batches: ListReportBatch[] = parsed?.batches ?? fallbackBatchMap.get(r.id) ?? [];
+
+    let summary: ReportSummary | null = parsed?.summary ?? null;
+    if (summary && summary.severity === undefined) {
+      const workflows: WorkflowResult[] = parsed?.riskReport?.workflows ?? [];
+      const triggered = workflows.flatMap((w: WorkflowResult) => w.findings).filter((f: { triggered: boolean }) => f.triggered);
+      const severity = triggered.reduce<ReportSummary['severity']>(
+        (worst, f: { severity: string }) => ((severityRank[f.severity] ?? -1) > severityRank[worst] ? f.severity as ReportSummary['severity'] : worst),
+        'none',
+      );
+      summary = { ...summary, severity };
+    }
+
     return {
       id: r.id,
       title: r.title ?? '',
@@ -399,7 +426,7 @@ export async function listReports(
       documents,
       batches,
       workflows: r.workflows,
-      summary: parsed?.summary ?? null,
+      summary,
       createdAt: r.createdAt.toISOString(),
     };
   });

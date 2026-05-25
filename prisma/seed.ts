@@ -138,6 +138,11 @@ const SEED_DATA = [
         name: 'Cloned Transaction Pattern',
         description: 'Detects duplicate transactions sharing the same amount, description, and direction within a short window — a common artifact of statement forgery where only reference codes are incremented.',
       },
+      {
+        slug: 'round-amount-concentration',
+        name: 'Round Amount Concentration',
+        description: 'Flags statements where an abnormally high proportion of transaction amounts are whole numbers (no cent values) — a strong indicator of manually fabricated or manipulated entries.',
+      },
     ],
   },
 ];

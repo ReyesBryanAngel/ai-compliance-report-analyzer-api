@@ -90,7 +90,7 @@ async function generateSingleReport(
   const report = await prisma.report.create({
     data: {
       title: reportTitle,
-      status: 'ANALYZING',
+      status: 'GENERATING',
       documentIds: [doc.id],
       workflows,
       userId,
@@ -236,11 +236,11 @@ export async function generateReport(
     });
   }
 
-  const notReady = documents.filter((d) => d.status !== 'PROCESSED');
+  const notReady = documents.filter((d) => d.status !== 'COMPLETED');
   if (notReady.length > 0) {
     throw Object.assign(
       new Error(
-        `Documents not ready for analysis (status must be PROCESSED): ${notReady.map((d) => `${d.id} [${d.status}]`).join(', ')}`,
+        `Documents not ready for analysis (status must be COMPLETED): ${notReady.map((d) => `${d.id} [${d.status}]`).join(', ')}`,
       ),
       { code: 'NOT_READY' },
     );

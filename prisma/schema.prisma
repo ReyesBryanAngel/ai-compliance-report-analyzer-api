@@ -41,7 +41,7 @@ model Report {
   id             String            @id @default(uuid())
   title          String?
   content        String?           @db.Text
-  status         ReportStatus      @default(PENDING)
+  status         ReportStatus      @default(GENERATING)
   userId         String?
   user           User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
   organizationId String?
@@ -68,8 +68,7 @@ model ComplianceCheck {
 }
 
 enum ReportStatus {
-  PENDING
-  ANALYZING
+  GENERATING
   COMPLETED
   FAILED
 }
@@ -91,7 +90,7 @@ model Document {
   mimeType       String
   size           Int
   path           String
-  status         DocumentStatus @default(PENDING)
+  status         DocumentStatus @default(PROCESSING)
   parsedData     Json?
   batchId        String?
   batch          DocumentBatch? @relation(fields: [batchId], references: [id])
@@ -106,9 +105,7 @@ model Document {
 }
 
 enum DocumentStatus {
-  PENDING
   PROCESSING
-  PROCESSED
   COMPLETED
   FAILED
 }

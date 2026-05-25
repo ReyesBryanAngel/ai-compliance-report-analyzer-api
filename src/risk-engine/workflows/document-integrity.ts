@@ -7,6 +7,7 @@ import {
 } from '../checkpoints/statement-balance-discrepancy';
 import { checkAmountDigitDistribution } from '../checkpoints/amount-digit-distribution';
 import { checkClonedTransactionPattern } from '../checkpoints/cloned-transaction-pattern';
+import { checkRoundAmountConcentration } from '../checkpoints/round-amount-concentration';
 import type { ThresholdBand } from '../checkpoints/gambling-utils';
 
 export type DocumentIntegrityThresholds = {
@@ -38,6 +39,9 @@ export function runDocumentIntegrity(
       : []),
     ...(enabled('cloned-transaction-pattern')
       ? [checkClonedTransactionPattern(transactions)]
+      : []),
+    ...(enabled('round-amount-concentration')
+      ? [checkRoundAmountConcentration(transactions)]
       : []),
   ];
 

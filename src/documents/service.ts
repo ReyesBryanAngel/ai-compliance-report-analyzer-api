@@ -75,7 +75,6 @@ export async function saveDocument(
       mimeType: part.mimetype,
       size,
       path: s3Key,
-      status: 'COMPLETED',
       batchId: batchId ?? null,
       uploadedById: uploadedById ?? null,
       organizationId: organizationId ?? null,
@@ -109,7 +108,7 @@ export async function parseDocument(documentId: string, prisma: PrismaClient): P
     const { transactions, skipped } = await parser.parseStream(Body as Readable);
     await prisma.document.update({
       where: { id: documentId },
-      data: { status: 'PROCESSED', parsedData: transactions },
+      data: { status: 'COMPLETED', parsedData: transactions },
     });
 
     return {

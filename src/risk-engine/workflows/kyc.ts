@@ -5,6 +5,7 @@ import { checkRecurringSalary } from '../checkpoints/recurring-salary';
 import { checkIncomeConsistency } from '../checkpoints/income-consistency';
 import { checkLoanStacking } from '../checkpoints/loan-stacking';
 import { checkLowBalancePersistence } from '../checkpoints/low-balance-persistence';
+import { checkRoundAmountConcentration } from '../checkpoints/round-amount-concentration';
 import { ThresholdBand } from '../checkpoints/gambling-utils';
 
 export type KycThresholds = {
@@ -30,6 +31,7 @@ export function runKyc(
     ...(enabled('income-consistency') ? [checkIncomeConsistency(transactions)] : []),
     ...(enabled('loan-stacking') ? [checkLoanStacking(transactions, resolved['loan-stacking'])] : []),
     ...(enabled('low-balance-persistence') ? [checkLowBalancePersistence(transactions, resolved['low-balance-persistence'])] : []),
+    ...(enabled('round-amount-concentration') ? [checkRoundAmountConcentration(transactions)] : []),
   ];
 
   return {

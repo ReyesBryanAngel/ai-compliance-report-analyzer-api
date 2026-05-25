@@ -6,7 +6,7 @@ import {
   detectChannel,
   detectCategory,
   extractBeneficiaryId,
-  detectCountry,
+  // detectCountry,
 } from './normalize';
 
 // Date anchored at start of a line — covers ISO, DD/MM/YYYY, MM/DD/YYYY, DD-Mon-YYYY, Mon DD YYYY
@@ -120,16 +120,16 @@ function parseBlock(block: string): NormalizedTransaction | null {
     direction = 'inflow';
   }
 
-  const tx: NormalizedTransaction = { date, description, amount: txAmount, direction };
-  if (balance !== undefined) tx.balance = balance;
+  const tx: NormalizedTransaction = { date, description, amount: txAmount.toFixed(2), direction };
+  if (balance !== undefined) tx.balance = balance.toFixed(2);
 
   tx.channel = detectChannel(description);
   const category = detectCategory(description, direction);
   if (category) tx.category = category;
   const beneficiaryId = extractBeneficiaryId(description);
   if (beneficiaryId) tx.beneficiaryId = beneficiaryId;
-  const country = detectCountry(description);
-  if (country) tx.country = country;
+  // const country = detectCountry(description);
+  // if (country) tx.country = country;
 
   return tx;
 }

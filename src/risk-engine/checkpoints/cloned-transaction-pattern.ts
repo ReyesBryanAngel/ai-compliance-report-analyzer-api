@@ -22,11 +22,11 @@ function normalizeDesc(description: string): string {
 }
 
 function cloneKey(tx: NormalizedTransaction): string {
-  return `${tx.amount.toFixed(2)}|${tx.direction}|${normalizeDesc(tx.description)}`;
+  return `${tx.amount}|${tx.direction}|${normalizeDesc(tx.description)}`;
 }
 
 function exactKey(tx: NormalizedTransaction): string {
-  return `${tx.date}|${tx.amount.toFixed(2)}|${tx.direction}|${tx.description.toLowerCase().trim()}`;
+  return `${tx.date}|${tx.amount}|${tx.direction}|${tx.description.toLowerCase().trim()}`;
 }
 
 export function checkClonedTransactionPattern(

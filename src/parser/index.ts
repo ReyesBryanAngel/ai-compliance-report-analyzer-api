@@ -22,7 +22,7 @@ export function getParser(mimeType: string): ParserStrategy | null {
     case 'image/jpeg':
     case 'image/png':
     case 'image/webp':
-      return new ImageParser();
+      return new ImageParser(mimeType);
     default:
       return null;
   }

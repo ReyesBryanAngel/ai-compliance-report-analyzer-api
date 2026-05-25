@@ -1,11 +1,17 @@
 import { FastifyPluginAsync } from 'fastify';
-import { saveDocument, parseDocument, createDocumentBatch, getDownloadUrl } from './service';
+import { saveDocument, parseDocument, createDocumentBatch, getDownloadUrl, createUploadUrl, confirmUpload } from './service';
 import type { UploadResponse, UploadedDocument, BatchInfo } from './types';
 import type { ParseResult } from '../parser';
 
 interface ListQuery {
   batch_id?: string;
   document_id?: string;
+}
+
+interface UploadUrlBody {
+  files: Array<{ filename: string }>;
+  batchName?: string;
+  batchDescription?: string;
 }
 
 const documentSchema = {
@@ -227,6 +233,137 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
 
     const downloadUrl = await getDownloadUrl(doc.path);
     return reply.send({ ...doc, createdAt: doc.createdAt.toISOString(), downloadUrl });
+  });
+
+  server.post<{ Body: UploadUrlBody }>('/upload-url', {
+    onRequest: [server.authenticate],
+    schema: {
+      tags: ['Documents'],
+      summary: 'Request pre-signed S3 URLs for direct browser upload',
+      body: {
+        type: 'object',
+        required: ['files'],
+        properties: {
+          files: {
+            type: 'array',
+            minItems: 1,
+            items: {
+              type: 'object',
+              required: ['filename'],
+              properties: { filename: { type: 'string' } },
+            },
+          },
+          batchName:        { type: 'string' },
+          batchDescription: { type: 'string' },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            batch: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                id:          { type: 'string' },
+                name:        { type: 'string' },
+                description: { type: 'string', nullable: true },
+                createdAt:   { type: 'string' },
+              },
+            },
+            documents: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  uploadUrl: { type: 'string' },
+                  document:  documentSchema,
+                },
+              },
+            },
+            failed: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  filename: { type: 'string' },
+                  error:    { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const { files, batchName, batchDescription } = request.body;
+    const uploadedById = request.user.sub;
+    const orgId = request.user.organizationId || undefined;
+
+    let batchRecord: BatchInfo | null = null;
+    let batchId: string | undefined;
+    if (batchName) {
+      batchRecord = await createDocumentBatch(batchName, batchDescription, server.prisma);
+      batchId = batchRecord.id;
+    }
+
+    const results = await Promise.allSettled(
+      files.map(({ filename }) => createUploadUrl(filename, server.prisma, uploadedById, orgId, batchId)),
+    );
+
+    const documents: Array<{ uploadUrl: string; document: UploadedDocument }> = [];
+    const failed: Array<{ filename: string; error: string }> = [];
+
+    results.forEach((result, i) => {
+      if (result.status === 'fulfilled') {
+        documents.push(result.value);
+      } else {
+        failed.push({
+          filename: files[i].filename,
+          error: result.reason instanceof Error ? result.reason.message : 'Unknown error',
+        });
+      }
+    });
+
+    return reply.send({ batch: batchRecord, documents, failed });
+  });
+
+  server.post<{ Params: { id: string } }>('/:id/confirm', {
+    onRequest: [server.authenticate],
+    schema: {
+      tags: ['Documents'],
+      summary: 'Confirm a direct S3 upload and trigger background parsing',
+      params: {
+        type: 'object',
+        properties: { id: { type: 'string' } },
+        required: ['id'],
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: { ok: { type: 'boolean' } },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const orgId = request.user.organizationId || null;
+    try {
+      await confirmUpload(request.params.id, server.prisma, orgId);
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'Document not found') return reply.notFound(err.message);
+        if ((err as NodeJS.ErrnoException).name === 'NotFound') {
+          return reply.badRequest('File not found in S3 — upload may not have completed');
+        }
+      }
+      throw err;
+    }
+
+    parseDocument(request.params.id, server.prisma).catch((err: unknown) => {
+      server.log.error({ docId: request.params.id, err }, 'Background parse failed');
+    });
+
+    return reply.send({ ok: true });
   });
 
   server.post<{ Params: { id: string }; Reply: ParseResult }>('/:id/parse', {

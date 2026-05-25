@@ -9,7 +9,7 @@ import {
   detectChannel,
   detectCategory,
   extractBeneficiaryId,
-  detectCountry,
+  // detectCountry,
 } from './normalize';
 
 export class CsvParser implements ParserStrategy {
@@ -52,13 +52,13 @@ export class CsvParser implements ParserStrategy {
       const tx: NormalizedTransaction = {
         date,
         description,
-        amount,
+        amount: amount.toFixed(2),
         direction,
       };
 
       if (cols.balance) {
         const bal = parseAmount(row[cols.balance]);
-        if (bal !== null) tx.balance = bal;
+        if (bal !== null) tx.balance = Math.abs(bal).toFixed(2);
       }
 
       if (cols.currency) {

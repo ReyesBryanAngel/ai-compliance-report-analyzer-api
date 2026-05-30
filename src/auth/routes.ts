@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { register, login } from './service';
+import { register, login, refresh } from './service';
 import type { RegisterBody, LoginBody, AuthResponse } from './types';
 
 const userSchema = {
@@ -15,8 +15,9 @@ const userSchema = {
 const authResponseSchema = {
   type: 'object',
   properties: {
-    token: { type: 'string' },
-    user:  userSchema,
+    token:        { type: 'string' },
+    refreshToken: { type: 'string' },
+    user:         userSchema,
   },
 };
 
@@ -70,6 +71,31 @@ const authRoutes: FastifyPluginAsync = async (server) => {
     try {
       const { email, password } = request.body;
       const result = await login(email, password, server.prisma, (p) => server.jwt.sign(p));
+      return reply.send(result);
+    } catch (err) {
+      if (err instanceof Error && (err as NodeJS.ErrnoException & { code?: string }).code === 'UNAUTHORIZED') {
+        return reply.unauthorized(err.message);
+      }
+      throw err;
+    }
+  });
+
+  server.post<{ Body: { refreshToken: string }; Reply: AuthResponse }>('/refresh', {
+    schema: {
+      tags: ['Auth'],
+      summary: 'Exchange a refresh token for a new access token and refresh token',
+      body: {
+        type: 'object',
+        required: ['refreshToken'],
+        properties: {
+          refreshToken: { type: 'string' },
+        },
+      },
+      response: { 200: authResponseSchema },
+    },
+  }, async (request, reply) => {
+    try {
+      const result = await refresh(request.body.refreshToken, server.prisma, (p) => server.jwt.sign(p));
       return reply.send(result);
     } catch (err) {
       if (err instanceof Error && (err as NodeJS.ErrnoException & { code?: string }).code === 'UNAUTHORIZED') {

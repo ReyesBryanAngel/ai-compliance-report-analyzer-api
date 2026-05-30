@@ -24,7 +24,7 @@ declare module 'fastify' {
 const authPlugin: FastifyPluginAsync = fp(async (server) => {
   server.register(jwt, {
     secret: process.env.JWT_SECRET!,
-    sign: { expiresIn: '7d' },
+    sign: { expiresIn: '365d' },
   });
 
   server.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {

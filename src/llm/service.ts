@@ -69,9 +69,9 @@ export async function generateNarrative(
 
   try {
     const response = await client.messages.create({
-      model: 'claude-opus-4-7',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 8000,
-      thinking: { type: 'adaptive' } as Parameters<typeof client.messages.create>[0]['thinking'],
+      // thinking: { type: 'adaptive' } as Parameters<typeof client.messages.create>[0]['thinking'], ////use only for claude-opus-4-7
       system: [
         {
           type: 'text',
@@ -80,7 +80,7 @@ export async function generateNarrative(
         },
       ],
       output_config: {
-        effort: 'medium',
+        // effort: 'medium', //use only for claude-opus-4-7
         format: {
           type: 'json_schema',
           name: 'compliance_narrative',

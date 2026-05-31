@@ -1,5 +1,4 @@
-import { NormalizedTransaction } from '../../parser/types';
-import { RiskFinding } from '../types';
+import { NumericTransaction, RiskFinding } from '../types';
 import { applyThreshold } from './gambling-utils';
 
 export type CtrThresholds = {
@@ -21,12 +20,12 @@ export const CTR_DEFAULTS: CtrThresholds = {
 };
 
 export function checkCtrThreshold(
-  transactions: NormalizedTransaction[],
+  transactions: NumericTransaction[],
   thresholds: CtrThresholds = CTR_DEFAULTS,
 ): RiskFinding {
   const { singleTxLimit, dailyAggregateLimit, greenMax, amberMax } = thresholds;
 
-  const evidence: NormalizedTransaction[] = [];
+  const evidence: NumericTransaction[] = [];
   let breachCount = 0;
 
   // Phase 1: individual transactions that independently breach the reporting threshold.
@@ -39,7 +38,7 @@ export function checkCtrThreshold(
   // days that were already flagged via single-transaction breaches.
   const subThreshold = transactions.filter(t => t.amount < singleTxLimit);
 
-  const byDay = new Map<string, NormalizedTransaction[]>();
+  const byDay = new Map<string, NumericTransaction[]>();
   for (const tx of subThreshold) {
     const day = tx.date.slice(0, 10);
     if (!byDay.has(day)) byDay.set(day, []);

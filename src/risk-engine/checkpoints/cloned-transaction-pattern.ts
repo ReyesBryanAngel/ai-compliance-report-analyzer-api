@@ -1,5 +1,4 @@
-import { NormalizedTransaction } from '../../parser/types';
-import { RiskFinding } from '../types';
+import { NumericTransaction, RiskFinding } from '../types';
 
 const MIN_SAMPLE = 5;
 // Two transactions sharing the same fingerprint within this many days = suspicious
@@ -21,16 +20,16 @@ function normalizeDesc(description: string): string {
     .trim();
 }
 
-function cloneKey(tx: NormalizedTransaction): string {
+function cloneKey(tx: NumericTransaction): string {
   return `${tx.amount}|${tx.direction}|${normalizeDesc(tx.description)}`;
 }
 
-function exactKey(tx: NormalizedTransaction): string {
+function exactKey(tx: NumericTransaction): string {
   return `${tx.date}|${tx.amount}|${tx.direction}|${tx.description.toLowerCase().trim()}`;
 }
 
 export function checkClonedTransactionPattern(
-  transactions: NormalizedTransaction[],
+  transactions: NumericTransaction[],
 ): RiskFinding {
   if (transactions.length < MIN_SAMPLE) {
     return {
@@ -44,7 +43,7 @@ export function checkClonedTransactionPattern(
   }
 
   // Pass 1: same-day exact duplicates — identical (date, amount, direction, description)
-  const byExactKey = new Map<string, NormalizedTransaction[]>();
+  const byExactKey = new Map<string, NumericTransaction[]>();
   for (const tx of transactions) {
     const key = exactKey(tx);
     const bucket = byExactKey.get(key) ?? [];
@@ -54,7 +53,7 @@ export function checkClonedTransactionPattern(
   const sameDayDupes = [...byExactKey.values()].filter((g) => g.length >= 2).flat();
 
   // Pass 2: clone clusters — same fingerprint, any consecutive pair within CLONE_GAP_DAYS
-  const byCloneKey = new Map<string, NormalizedTransaction[]>();
+  const byCloneKey = new Map<string, NumericTransaction[]>();
   for (const tx of transactions) {
     const key = cloneKey(tx);
     const bucket = byCloneKey.get(key) ?? [];
@@ -62,7 +61,7 @@ export function checkClonedTransactionPattern(
     byCloneKey.set(key, bucket);
   }
 
-  const clusterEvidence: NormalizedTransaction[] = [];
+  const clusterEvidence: NumericTransaction[] = [];
   for (const group of byCloneKey.values()) {
     if (group.length < 2) continue;
     const sorted = [...group].sort((a, b) => a.date.localeCompare(b.date));
@@ -73,7 +72,7 @@ export function checkClonedTransactionPattern(
   }
 
   // Deduplicate across both passes (a same-day dupe is also caught by cluster pass)
-  const evidenceSet = new Set<NormalizedTransaction>([...sameDayDupes, ...clusterEvidence]);
+  const evidenceSet = new Set<NumericTransaction>([...sameDayDupes, ...clusterEvidence]);
   const evidence = [...evidenceSet];
 
   const hasSameDayDupes = sameDayDupes.length > 0;

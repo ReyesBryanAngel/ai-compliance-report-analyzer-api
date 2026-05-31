@@ -1,9 +1,8 @@
-import { NormalizedTransaction } from '../../parser/types';
-import { RiskFinding } from '../types';
+import { NumericTransaction, RiskFinding } from '../types';
 import { applyThreshold, isGamblingTx, ThresholdBand } from './gambling-utils';
 
 export function checkGamblingOverdrafts(
-  transactions: NormalizedTransaction[],
+  transactions: NumericTransaction[],
   band: ThresholdBand,
 ): RiskFinding {
   // An overdraft caused by gambling: a gambling outflow where the post-transaction

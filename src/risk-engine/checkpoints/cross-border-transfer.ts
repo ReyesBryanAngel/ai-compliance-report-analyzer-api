@@ -1,7 +1,5 @@
-import { NormalizedTransaction } from '../../parser/types';
-import { RiskFinding } from '../types';
+import { NumericTransaction, RiskFinding } from '../types';
 import { applyThreshold } from './gambling-utils';
-import { jurisdictionRisk } from '../data/high-risk-countries';
 
 export type CrossBorderThresholds = {
   /** Minimum transaction amount (PHP) to include in scoring; filters out trivial FX fees. */
@@ -25,58 +23,20 @@ export const CROSS_BORDER_DEFAULTS: CrossBorderThresholds = {
 };
 
 export function checkCrossBorderTransfer(
-  transactions: NormalizedTransaction[],
+  transactions: NumericTransaction[],
   thresholds: CrossBorderThresholds = CROSS_BORDER_DEFAULTS,
 ): RiskFinding {
   const { minAmount, currencyMixWindowDays, currencyMixMinDistinct, greenMax, amberMax } = thresholds;
 
-  // ── Phase 1: FATF blacklist ────────────────────────────────────────────────
-  // Immediate high-severity return; no threshold grace applies.
-  const blacklistTxs = transactions.filter(
-    t => t.country && t.amount >= minAmount && jurisdictionRisk(t.country) === 'blacklist',
-  );
-
-  if (blacklistTxs.length > 0) {
-    const countries = [...new Set(blacklistTxs.map(t => t.country))].join(', ');
-    return {
-      checkpoint: 'cross-border-transfer',
-      triggered: true,
-      severity: 'high',
-      score: 100,
-      reason: `${blacklistTxs.length} transaction(s) linked to FATF-blacklisted jurisdiction(s): ${countries}. Immediate AML escalation required.`,
-      evidence: blacklistTxs,
-    };
-  }
-
-  // ── Phase 2: Greylist / offshore / EU-blacklist transactions ──────────────
-  // Count each qualifying foreign transaction as one flagged event.
-  const riskTiers: Record<'greylist' | 'offshore' | 'eu-blacklist', string[]> = {
-    greylist: [],
-    offshore: [],
-    'eu-blacklist': [],
-  };
-  const jurisdictionTxs: NormalizedTransaction[] = [];
-
-  for (const t of transactions) {
-    if (!t.country || t.amount < minAmount) continue;
-    const tier = jurisdictionRisk(t.country);
-    if (tier === 'none' || tier === 'blacklist') continue;
-    riskTiers[tier].push(t.country);
-    jurisdictionTxs.push(t);
-  }
-
-  let flaggedCount = jurisdictionTxs.length;
-
-  // ── Phase 3: Currency-mixing signal ───────────────────────────────────────
-  // Rapid rotation through multiple foreign currencies within a rolling window
-  // is a layering indicator (obscuring fund origin via FX conversion).
+  // Detect currency-mixing: rapid rotation through multiple foreign currencies within a rolling window.
   const foreignTxs = transactions
     .filter(t => t.currency && t.currency !== 'PHP' && t.amount >= minAmount)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const windowMs = currencyMixWindowDays * 24 * 60 * 60 * 1000;
   let lastMixWindowStart = -Infinity;
-  const mixEvidence: NormalizedTransaction[] = [];
+  let flaggedCount = 0;
+  const mixEvidence: NumericTransaction[] = [];
 
   for (const anchor of foreignTxs) {
     const t0 = new Date(anchor.date).getTime();
@@ -95,28 +55,16 @@ export function checkCrossBorderTransfer(
     }
   }
 
-  // ── Deduplication ─────────────────────────────────────────────────────────
   const seen = new Set<string>();
-  const allEvidence = [...jurisdictionTxs, ...mixEvidence].filter(t => {
+  const allEvidence = mixEvidence.filter(t => {
     const key = `${t.date}-${t.amount}-${t.description}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 
-  // ── Reason string ─────────────────────────────────────────────────────────
-  const parts: string[] = [];
-  const greylistCountries = [...new Set(riskTiers.greylist)];
-  const offshoreCountries = [...new Set(riskTiers.offshore)];
-  const euBlacklistCountries = [...new Set(riskTiers['eu-blacklist'])];
-
-  if (greylistCountries.length) parts.push(`FATF greylist (${greylistCountries.join(', ')})`);
-  if (offshoreCountries.length) parts.push(`offshore haven (${offshoreCountries.join(', ')})`);
-  if (euBlacklistCountries.length) parts.push(`EU tax blacklist (${euBlacklistCountries.join(', ')})`);
-  if (mixEvidence.length) parts.push(`currency mixing ≥${currencyMixMinDistinct} currencies/${currencyMixWindowDays}d`);
-
-  const metricLabel = parts.length
-    ? `Cross-border risk events — ${parts.join('; ')}`
+  const metricLabel = mixEvidence.length
+    ? `Currency mixing ≥${currencyMixMinDistinct} currencies/${currencyMixWindowDays}d`
     : `Cross-border transactions ≥ PHP ${minAmount.toLocaleString()}`;
 
   return applyThreshold(

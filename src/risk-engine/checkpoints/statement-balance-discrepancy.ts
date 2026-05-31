@@ -1,5 +1,4 @@
-import { NormalizedTransaction } from '../../parser/types';
-import { RiskFinding } from '../types';
+import { NumericTransaction, RiskFinding } from '../types';
 import { applyThreshold, ThresholdBand } from './gambling-utils';
 
 const ROUNDING_TOLERANCE = 1.0;
@@ -10,7 +9,7 @@ export const BALANCE_DISCREPANCY_DEFAULTS: ThresholdBand = {
 };
 
 export function checkStatementBalanceDiscrepancy(
-  transactions: NormalizedTransaction[],
+  transactions: NumericTransaction[],
   band: ThresholdBand = BALANCE_DISCREPANCY_DEFAULTS,
 ): RiskFinding {
   const withBalance = transactions.filter((tx) => tx.balance !== undefined);
@@ -27,15 +26,15 @@ export function checkStatementBalanceDiscrepancy(
   }
 
   const sorted = [...withBalance].sort((a, b) => a.date.localeCompare(b.date));
-  const discrepant: NormalizedTransaction[] = [];
+  const discrepant: NumericTransaction[] = [];
 
-  let expectedBalance = sorted[0].balance as number;
+  let expectedBalance = sorted[0].balance!;
 
   for (let i = 1; i < sorted.length; i++) {
     const tx = sorted[i];
     const delta = tx.direction === 'inflow' ? tx.amount : -tx.amount;
     expectedBalance += delta;
-    const reportedBalance = tx.balance as number;
+    const reportedBalance = tx.balance!;
 
     if (Math.abs(reportedBalance - expectedBalance) > ROUNDING_TOLERANCE) {
       discrepant.push(tx);

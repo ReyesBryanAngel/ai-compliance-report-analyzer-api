@@ -1,5 +1,4 @@
-import { NormalizedTransaction } from '../../parser/types';
-import { RiskFinding } from '../types';
+import { NumericTransaction, RiskFinding } from '../types';
 
 const SALARY_PATTERNS = [
   /\bsalary\b/i,
@@ -16,14 +15,14 @@ const SALARY_PATTERNS = [
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-function isSalaryInflow(tx: NormalizedTransaction): boolean {
+function isSalaryInflow(tx: NumericTransaction): boolean {
   if (tx.direction !== 'inflow') return false;
   if (tx.category === 'salary') return true;
   return SALARY_PATTERNS.some(p => p.test(tx.description));
 }
 
-function groupByMonth(txns: NormalizedTransaction[]): Record<string, NormalizedTransaction[]> {
-  return txns.reduce<Record<string, NormalizedTransaction[]>>((acc, tx) => {
+function groupByMonth(txns: NumericTransaction[]): Record<string, NumericTransaction[]> {
+  return txns.reduce<Record<string, NumericTransaction[]>>((acc, tx) => {
     const month = tx.date.slice(0, 7);
     (acc[month] ??= []).push(tx);
     return acc;
@@ -39,14 +38,14 @@ function stddev(values: number[]): number {
 
 // Signal 1 — keyword match (weight: 30)
 // Any transaction already matched the salary merchant dictionary.
-function signalKeyword(salaryTxns: NormalizedTransaction[]): boolean {
+function signalKeyword(salaryTxns: NumericTransaction[]): boolean {
   return salaryTxns.length > 0;
 }
 
 // Signal 2 — recurring day-of-month pattern (weight: 25)
 // Salary lands on a consistent day (e.g. every 15th/30th). End-of-month dates
 // (28–31) are normalised to 28 so they don't inflate variance.
-function signalMonthlyPattern(salaryTxns: NormalizedTransaction[]): boolean {
+function signalMonthlyPattern(salaryTxns: NumericTransaction[]): boolean {
   if (salaryTxns.length < 2) return false;
   const days = salaryTxns.map(tx => {
     const d = parseInt(tx.date.slice(8, 10), 10);
@@ -67,7 +66,7 @@ function signalStableAmount(monthlyPeak: number[]): boolean {
 // A single word (≥ 4 chars) from the description appears in ≥ 70 % of months —
 // proxy for the same employer/payer each cycle.
 function signalConsistentSender(
-  salaryTxns: NormalizedTransaction[],
+  salaryTxns: NumericTransaction[],
   monthCount: number,
 ): boolean {
   const wordMonths: Record<string, Set<string>> = {};
@@ -85,7 +84,7 @@ function signalConsistentSender(
 // Signal 5 — bank/transfer channel (weight: 10)
 // Salary via payroll typically arrives as a bank credit or inter-bank transfer,
 // not via an e-wallet top-up or ATM deposit.
-function signalBankChannel(salaryTxns: NormalizedTransaction[]): boolean {
+function signalBankChannel(salaryTxns: NumericTransaction[]): boolean {
   if (salaryTxns.length === 0) return false;
   const bankCount = salaryTxns.filter(
     tx => tx.channel === 'bank' || tx.channel === 'transfer',
@@ -104,8 +103,8 @@ const SIGNAL_WEIGHTS = {
 } as const;
 
 function computeSalaryConfidence(
-  salaryTxns: NormalizedTransaction[],
-  byMonth: Record<string, NormalizedTransaction[]>,
+  salaryTxns: NumericTransaction[],
+  byMonth: Record<string, NumericTransaction[]>,
   months: string[],
 ): number {
   const monthlyPeak = months.map(m => Math.max(...byMonth[m].map(tx => tx.amount)));
@@ -122,7 +121,7 @@ function computeSalaryConfidence(
 
 // ─── checkpoint ───────────────────────────────────────────────────────────────
 
-export function checkRecurringSalary(transactions: NormalizedTransaction[]): RiskFinding {
+export function checkRecurringSalary(transactions: NumericTransaction[]): RiskFinding {
   const salaryTxns = transactions.filter(isSalaryInflow);
   const byMonth = groupByMonth(salaryTxns);
   const months = Object.keys(byMonth).sort();

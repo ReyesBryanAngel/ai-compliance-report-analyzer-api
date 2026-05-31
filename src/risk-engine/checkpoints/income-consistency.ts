@@ -1,10 +1,9 @@
-import { NormalizedTransaction } from '../../parser/types';
-import { RiskFinding } from '../types';
+import { NumericTransaction, RiskFinding } from '../types';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-function groupByMonth(txns: NormalizedTransaction[]): Record<string, NormalizedTransaction[]> {
-  return txns.reduce<Record<string, NormalizedTransaction[]>>((acc, tx) => {
+function groupByMonth(txns: NumericTransaction[]): Record<string, NumericTransaction[]> {
+  return txns.reduce<Record<string, NumericTransaction[]>>((acc, tx) => {
     const month = tx.date.slice(0, 7);
     (acc[month] ??= []).push(tx);
     return acc;
@@ -40,7 +39,7 @@ function classifyTrend(totals: number[]): Trend {
 
 // ─── checkpoint ───────────────────────────────────────────────────────────────
 
-export function checkIncomeConsistency(transactions: NormalizedTransaction[]): RiskFinding {
+export function checkIncomeConsistency(transactions: NumericTransaction[]): RiskFinding {
   const inflows = transactions.filter(tx => tx.direction === 'inflow');
   const byMonth = groupByMonth(inflows);
   const months = Object.keys(byMonth).sort();

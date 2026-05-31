@@ -1,5 +1,4 @@
-import { NormalizedTransaction } from '../../parser/types';
-import { RiskFinding } from '../types';
+import { NumericTransaction, RiskFinding } from '../types';
 
 const MIN_SAMPLE = 50;
 
@@ -23,7 +22,7 @@ function leadingDigit(amount: number): number | null {
 }
 
 export function checkAmountDigitDistribution(
-  transactions: NormalizedTransaction[],
+  transactions: NumericTransaction[],
 ): RiskFinding {
   const eligible = transactions.filter((tx) => tx.amount > 0);
 
@@ -39,7 +38,7 @@ export function checkAmountDigitDistribution(
   }
 
   const counts: Record<number, number> = { 1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0 };
-  const byDigit: Record<number, NormalizedTransaction[]> = { 1:[],2:[],3:[],4:[],5:[],6:[],7:[],8:[],9:[] };
+  const byDigit: Record<number, NumericTransaction[]> = { 1:[],2:[],3:[],4:[],5:[],6:[],7:[],8:[],9:[] };
 
   for (const tx of eligible) {
     const d = leadingDigit(tx.amount);

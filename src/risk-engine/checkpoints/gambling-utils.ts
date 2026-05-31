@@ -1,4 +1,4 @@
-import { NormalizedTransaction } from '../../parser/types';
+import { NumericTransaction } from '../types';
 
 const GAMBLING_PATTERNS = [
   /\bcasino\b/i,
@@ -21,7 +21,7 @@ const GAMBLING_PATTERNS = [
   /\bsportsbetting\b/i,
 ];
 
-export function isGamblingTx(tx: NormalizedTransaction): boolean {
+export function isGamblingTx(tx: NumericTransaction): boolean {
   if (tx.category === 'gambling') return true;
   return GAMBLING_PATTERNS.some((p) => p.test(tx.description));
 }
@@ -33,7 +33,7 @@ export function applyThreshold(
   band: ThresholdBand,
   checkpointName: string,
   metricLabel: string,
-  evidence: NormalizedTransaction[],
+  evidence: NumericTransaction[],
 ) {
   const { greenMax, amberMax } = band;
 

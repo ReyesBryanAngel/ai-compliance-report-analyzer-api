@@ -1,4 +1,4 @@
-import { NormalizedTransaction } from '../../parser/types';
+import { NumericTransaction } from '../types';
 import { WorkflowResult } from '../types';
 import { computeOverallScore } from '../scoring';
 import { checkGamblingDebits } from '../checkpoints/gambling-debits';
@@ -22,7 +22,7 @@ export const SG_DEFAULT_THRESHOLDS: SgThresholds = {
 };
 
 export function runSg(
-  transactions: NormalizedTransaction[],
+  transactions: NumericTransaction[],
   thresholds: Partial<SgThresholds> = {},
   enabledCheckpoints?: Set<string>,
 ): WorkflowResult {

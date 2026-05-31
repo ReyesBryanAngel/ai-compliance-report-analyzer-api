@@ -1,5 +1,4 @@
-import { NormalizedTransaction } from '../../parser/types';
-import { RiskFinding } from '../types';
+import { NumericTransaction, RiskFinding } from '../types';
 
 const MIN_SAMPLE = 10;
 
@@ -8,7 +7,7 @@ function isRound(amount: number): boolean {
 }
 
 export function checkRoundAmountConcentration(
-  transactions: NormalizedTransaction[],
+  transactions: NumericTransaction[],
 ): RiskFinding {
   const eligible = transactions.filter((tx) => tx.amount > 0);
 

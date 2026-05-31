@@ -1,5 +1,4 @@
-import { NormalizedTransaction } from '../../parser/types';
-import { RiskFinding } from '../types';
+import { NumericTransaction, RiskFinding } from '../types';
 import { applyThreshold } from './gambling-utils';
 
 export type RapidInflowOutflowThresholds = {
@@ -28,7 +27,7 @@ export const RAPID_INFLOW_OUTFLOW_DEFAULTS: RapidInflowOutflowThresholds = {
 };
 
 export function checkRapidInflowOutflow(
-  transactions: NormalizedTransaction[],
+  transactions: NumericTransaction[],
   thresholds: RapidInflowOutflowThresholds = RAPID_INFLOW_OUTFLOW_DEFAULTS,
 ): RiskFinding {
   const { windowHours, drainRatio, minInflow, greenMax, amberMax } = thresholds;
@@ -41,7 +40,7 @@ export function checkRapidInflowOutflow(
   const outflows = sorted.filter(t => t.direction === 'outflow');
 
   const windowMs = windowHours * 60 * 60 * 1000;
-  const cycleEvidence: NormalizedTransaction[] = [];
+  const cycleEvidence: NumericTransaction[] = [];
   let cycles = 0;
 
   for (const inflow of inflows) {

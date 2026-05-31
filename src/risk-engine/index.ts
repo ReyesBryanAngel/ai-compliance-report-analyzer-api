@@ -1,9 +1,9 @@
 import { NormalizedTransaction } from '../parser/types';
-import { RiskReport } from './types';
+import { RiskReport, NumericTransaction } from './types';
 import { runKyc, runSg, runTraml, runDocumentIntegrity } from './workflows';
 import type { KycThresholds, SgThresholds, TramlThresholds, DocumentIntegrityThresholds } from './workflows';
 
-export type { RiskFinding, RiskReport, WorkflowResult } from './types';
+export type { RiskFinding, RiskReport, WorkflowResult, NumericTransaction } from './types';
 export { runKyc, runSg, runTraml, runDocumentIntegrity, SUPPORTED_WORKFLOWS } from './workflows';
 export type { SupportedWorkflow, KycThresholds, SgThresholds, TramlThresholds, DocumentIntegrityThresholds } from './workflows';
 
@@ -20,13 +20,11 @@ export type RiskEngineOptions = {
   enabledCheckpoints?: Set<string>;
 };
 
-function normalizeAmounts(transactions: NormalizedTransaction[]): NormalizedTransaction[] {
+function normalizeAmounts(transactions: NormalizedTransaction[]): NumericTransaction[] {
   return transactions.map((tx) => ({
     ...tx,
-    amount: typeof tx.amount === 'string' ? parseFloat(tx.amount) : tx.amount,
-    balance: tx.balance !== undefined
-      ? (typeof tx.balance === 'string' ? parseFloat(tx.balance) : tx.balance)
-      : undefined,
+    amount: parseFloat(tx.amount),
+    balance: tx.balance !== undefined ? parseFloat(tx.balance) : undefined,
   }));
 }
 
@@ -36,8 +34,7 @@ export function runRiskEngine(
   options: RiskEngineOptions = {},
 ): RiskReport {
   const { thresholds = {}, enabledCheckpoints } = options;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const txs = normalizeAmounts(transactions) as any;
+  const txs = normalizeAmounts(transactions);
   const results = [];
   if (workflows.includes('kyc')) results.push(runKyc(txs, enabledCheckpoints, thresholds.kyc));
   if (workflows.includes('sg')) results.push(runSg(txs, thresholds.sg, enabledCheckpoints));

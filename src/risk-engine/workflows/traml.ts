@@ -1,4 +1,4 @@
-import { NormalizedTransaction } from '../../parser/types';
+import { NumericTransaction } from '../types';
 import { WorkflowResult } from '../types';
 import { computeOverallScore } from '../scoring';
 import {
@@ -91,7 +91,7 @@ export const TRAML_THRESHOLD_BANDS: Record<keyof TramlThresholds, { greenMax: nu
 };
 
 export function runTraml(
-  transactions: NormalizedTransaction[],
+  transactions: NumericTransaction[],
   thresholds: Partial<TramlThresholds> = {},
   enabledCheckpoints?: Set<string>,
 ): WorkflowResult {

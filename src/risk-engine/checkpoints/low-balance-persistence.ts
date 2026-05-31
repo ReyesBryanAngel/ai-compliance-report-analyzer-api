@@ -1,11 +1,10 @@
-import { NormalizedTransaction } from '../../parser/types';
-import { RiskFinding } from '../types';
+import { NumericTransaction, RiskFinding } from '../types';
 import { applyThreshold, ThresholdBand } from './gambling-utils';
 
 const LOW_BALANCE_RATIO = 0.20;
 
 export function checkLowBalancePersistence(
-  transactions: NormalizedTransaction[],
+  transactions: NumericTransaction[],
   band: ThresholdBand,
 ): RiskFinding {
   const withBalance = transactions.filter((tx) => tx.balance !== undefined);
@@ -36,7 +35,7 @@ export function checkLowBalancePersistence(
 
   // Last balance snapshot per month (later dates overwrite earlier ones after sort)
   const sorted = [...withBalance].sort((a, b) => a.date.localeCompare(b.date));
-  const endOfMonthSnapshot = sorted.reduce<Record<string, NormalizedTransaction>>(
+  const endOfMonthSnapshot = sorted.reduce<Record<string, NumericTransaction>>(
     (acc, tx) => {
       acc[tx.date.slice(0, 7)] = tx;
       return acc;
@@ -45,7 +44,7 @@ export function checkLowBalancePersistence(
   );
 
   const lowBalanceMonths = Object.values(endOfMonthSnapshot).filter(
-    (tx) => (tx.balance as number) < threshold,
+    (tx) => (tx.balance ?? 0) < threshold,
   );
 
   return applyThreshold(

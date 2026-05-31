@@ -1,5 +1,4 @@
-import { NormalizedTransaction } from '../../parser/types';
-import { RiskFinding } from '../types';
+import { NumericTransaction, RiskFinding } from '../types';
 import { applyThreshold } from './gambling-utils';
 
 export type FragmentedTransactionThresholds = {
@@ -27,7 +26,7 @@ export const FRAGMENTED_TRANSACTION_DEFAULTS: FragmentedTransactionThresholds = 
 };
 
 export function checkFragmentedTransactions(
-  transactions: NormalizedTransaction[],
+  transactions: NumericTransaction[],
   thresholds: FragmentedTransactionThresholds = FRAGMENTED_TRANSACTION_DEFAULTS,
 ): RiskFinding {
   const { windowDays, singleTxnCeiling, aggregateFloor, minFragments, greenMax, amberMax } = thresholds;
@@ -40,14 +39,14 @@ export function checkFragmentedTransactions(
 
   // Group by beneficiaryId (set by the parser). Transactions without one get a
   // unique key so they never form a cluster with unrelated outflows.
-  const byBeneficiary = new Map<string, NormalizedTransaction[]>();
+  const byBeneficiary = new Map<string, NumericTransaction[]>();
   for (const tx of outflows) {
     const key = tx.beneficiaryId ?? `ungrouped:${tx.date}-${tx.amount}-${tx.description}`;
     if (!byBeneficiary.has(key)) byBeneficiary.set(key, []);
     byBeneficiary.get(key)!.push(tx);
   }
 
-  const flaggedEvidence: NormalizedTransaction[] = [];
+  const flaggedEvidence: NumericTransaction[] = [];
   let flaggedClusters = 0;
 
   for (const group of byBeneficiary.values()) {

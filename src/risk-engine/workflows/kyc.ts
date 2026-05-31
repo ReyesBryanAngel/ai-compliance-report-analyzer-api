@@ -1,4 +1,4 @@
-import { NormalizedTransaction } from '../../parser/types';
+import { NumericTransaction } from '../types';
 import { WorkflowResult } from '../types';
 import { computeOverallScore } from '../scoring';
 import { checkRecurringSalary } from '../checkpoints/recurring-salary';
@@ -19,7 +19,7 @@ export const KYC_DEFAULT_THRESHOLDS: KycThresholds = {
 };
 
 export function runKyc(
-  transactions: NormalizedTransaction[],
+  transactions: NumericTransaction[],
   enabledCheckpoints?: Set<string>,
   thresholds: Partial<KycThresholds> = {},
 ): WorkflowResult {

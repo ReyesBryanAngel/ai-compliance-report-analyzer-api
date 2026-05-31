@@ -1,4 +1,4 @@
-import { NormalizedTransaction } from '../../parser/types';
+import { NumericTransaction } from '../types';
 import { WorkflowResult } from '../types';
 import { computeOverallScore } from '../scoring';
 import {
@@ -19,7 +19,7 @@ export const DOCUMENT_INTEGRITY_DEFAULT_THRESHOLDS: DocumentIntegrityThresholds 
 };
 
 export function runDocumentIntegrity(
-  transactions: NormalizedTransaction[],
+  transactions: NumericTransaction[],
   thresholds: Partial<DocumentIntegrityThresholds> = {},
   enabledCheckpoints?: Set<string>,
 ): WorkflowResult {

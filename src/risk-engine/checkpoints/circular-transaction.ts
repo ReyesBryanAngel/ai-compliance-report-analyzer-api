@@ -1,5 +1,4 @@
-import { NormalizedTransaction } from '../../parser/types';
-import { RiskFinding } from '../types';
+import { NumericTransaction, RiskFinding } from '../types';
 import { applyThreshold } from './gambling-utils';
 
 export type CircularTransactionThresholds = {
@@ -24,7 +23,7 @@ export const CIRCULAR_TRANSACTION_DEFAULTS: CircularTransactionThresholds = {
 };
 
 export function checkCircularTransaction(
-  transactions: NormalizedTransaction[],
+  transactions: NumericTransaction[],
   thresholds: CircularTransactionThresholds = CIRCULAR_TRANSACTION_DEFAULTS,
 ): RiskFinding {
   const { windowHours, amountTolerance, minAmount, greenMax, amberMax } = thresholds;
@@ -40,7 +39,7 @@ export function checkCircularTransaction(
   const inflows = sorted.filter(t => t.direction === 'inflow' && t.amount >= minAmount);
   const matchedInflowIndices = new Set<number>();
 
-  const evidence: NormalizedTransaction[] = [];
+  const evidence: NumericTransaction[] = [];
   let matches = 0;
 
   for (const outflow of outflows) {

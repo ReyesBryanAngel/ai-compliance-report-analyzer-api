@@ -1,5 +1,4 @@
-import { NormalizedTransaction } from '../../parser/types';
-import { RiskFinding } from '../types';
+import { NumericTransaction, RiskFinding } from '../types';
 import { applyThreshold } from './gambling-utils';
 
 export type RapidMovementThresholds = {
@@ -21,7 +20,7 @@ export const RAPID_MOVEMENT_DEFAULTS: RapidMovementThresholds = {
 };
 
 export function checkRapidMovementOfFunds(
-  transactions: NormalizedTransaction[],
+  transactions: NumericTransaction[],
   thresholds: RapidMovementThresholds = RAPID_MOVEMENT_DEFAULTS,
 ): RiskFinding {
   const { windowHours, velocityThreshold, greenMax, amberMax } = thresholds;
@@ -31,7 +30,7 @@ export function checkRapidMovementOfFunds(
   );
 
   const windowMs = windowHours * 60 * 60 * 1000;
-  const flaggedEvidence: NormalizedTransaction[] = [];
+  const flaggedEvidence: NumericTransaction[] = [];
   let flaggedWindows = 0;
 
   // For each transaction, treat it as the anchor of a forward-looking window.

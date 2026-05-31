@@ -1,5 +1,4 @@
-import { NormalizedTransaction } from '../../parser/types';
-import { RiskFinding } from '../types';
+import { NumericTransaction, RiskFinding } from '../types';
 import { SANCTIONS_LIST, SanctionedEntity, WatchlistSource } from '../data/sanctions-list';
 
 // ── Text normalization ─────────────────────────────────────────────────────
@@ -30,7 +29,7 @@ function nameMatchesTarget(entityName: string, targetTokenSet: Set<string>): boo
 
 type ScreenedField = 'description' | 'beneficiaryId' | 'reference';
 
-function extractScreenableText(tx: NormalizedTransaction): Partial<Record<ScreenedField, string>> {
+function extractScreenableText(tx: NumericTransaction): Partial<Record<ScreenedField, string>> {
   const fields: Partial<Record<ScreenedField, string>> = {};
   if (tx.description) fields.description = tx.description;
   if (tx.beneficiaryId) {
@@ -53,7 +52,7 @@ type MatchDetail = {
   field: ScreenedField;
 };
 
-function screenTransaction(tx: NormalizedTransaction): MatchDetail | null {
+function screenTransaction(tx: NumericTransaction): MatchDetail | null {
   const fields = extractScreenableText(tx);
 
   for (const [field, text] of Object.entries(fields) as [ScreenedField, string][]) {
@@ -80,8 +79,8 @@ const LIST_LABEL: Record<WatchlistSource, string> = {
   amlc: 'AMLC',
 };
 
-export function checkSanctionsWatchlist(transactions: NormalizedTransaction[]): RiskFinding {
-  type HitRecord = { tx: NormalizedTransaction; detail: MatchDetail };
+export function checkSanctionsWatchlist(transactions: NumericTransaction[]): RiskFinding {
+  type HitRecord = { tx: NumericTransaction; detail: MatchDetail };
   const hits: HitRecord[] = [];
 
   for (const tx of transactions) {
@@ -102,7 +101,7 @@ export function checkSanctionsWatchlist(transactions: NormalizedTransaction[]): 
 
   // Deduplicate evidence transactions.
   const seen = new Set<string>();
-  const evidence: NormalizedTransaction[] = [];
+  const evidence: NumericTransaction[] = [];
   for (const { tx } of hits) {
     const key = `${tx.date}-${tx.amount}-${tx.description}`;
     if (!seen.has(key)) {

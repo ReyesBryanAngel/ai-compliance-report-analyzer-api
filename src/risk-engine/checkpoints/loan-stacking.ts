@@ -1,5 +1,4 @@
-import { NormalizedTransaction } from '../../parser/types';
-import { RiskFinding } from '../types';
+import { NumericTransaction, RiskFinding } from '../types';
 import { applyThreshold, ThresholdBand } from './gambling-utils';
 
 // Loan disbursement patterns: inflows that represent a new credit facility being opened.
@@ -28,7 +27,7 @@ const LOAN_DISBURSEMENT_PATTERNS = [
   /\bgsis\s+loan\b/i,
 ];
 
-function isLoanDisbursement(tx: NormalizedTransaction): boolean {
+function isLoanDisbursement(tx: NumericTransaction): boolean {
   if (tx.direction !== 'inflow') return false;
   if (tx.category === 'loan_payment') return true;
   return LOAN_DISBURSEMENT_PATTERNS.some((p) => p.test(tx.description));
@@ -38,14 +37,14 @@ function isLoanDisbursement(tx: NormalizedTransaction): boolean {
 // A recurring payment from a single loan (one per month) will never exceed 1 within
 // any 30-day window, so monthly payments spread across months stay GREEN.
 // Concurrent loans taken out close together will pile up and breach AMBER/RED.
-function peakWindow(disbursements: NormalizedTransaction[]): NormalizedTransaction[] {
+function peakWindow(disbursements: NumericTransaction[]): NumericTransaction[] {
   if (disbursements.length === 0) return [];
 
   const sorted = [...disbursements].sort((a, b) => a.date.localeCompare(b.date));
   const MS_PER_DAY = 86_400_000;
   const WINDOW_MS = 30 * MS_PER_DAY;
 
-  let best: NormalizedTransaction[] = [];
+  let best: NumericTransaction[] = [];
 
   for (let i = 0; i < sorted.length; i++) {
     const anchor = new Date(sorted[i].date).getTime();
@@ -60,7 +59,7 @@ function peakWindow(disbursements: NormalizedTransaction[]): NormalizedTransacti
 }
 
 export function checkLoanStacking(
-  transactions: NormalizedTransaction[],
+  transactions: NumericTransaction[],
   band: ThresholdBand,
 ): RiskFinding {
   const disbursements = transactions.filter(isLoanDisbursement);

@@ -83,7 +83,6 @@ export async function generateNarrative(
         // effort: 'medium', //use only for claude-opus-4-7
         format: {
           type: 'json_schema',
-          name: 'compliance_narrative',
           schema: OUTPUT_SCHEMA,
         },
       } as Parameters<typeof client.messages.create>[0]['output_config'],

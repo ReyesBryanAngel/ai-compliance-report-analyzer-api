@@ -61,6 +61,25 @@ const checkSchema = {
   },
 };
 
+const narrativeSchema = {
+  type: 'object',
+  nullable: true,
+  properties: {
+    executiveSummary: { type: 'string' },
+    findingExplanations: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          checkpoint:  { type: 'string' },
+          explanation: { type: 'string' },
+        },
+      },
+    },
+    reviewerNotes: { type: 'string' },
+  },
+};
+
 const reportResponseSchema = {
   type: 'object',
   properties: {
@@ -72,6 +91,7 @@ const reportResponseSchema = {
     results:     { type: 'array', items: workflowResultSchema },
     checks:      { type: 'array', items: checkSchema },
     summary:     summarySchema,
+    narrative:   narrativeSchema,
     createdAt:   { type: 'string' },
   },
 };

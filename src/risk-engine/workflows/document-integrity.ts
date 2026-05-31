@@ -5,13 +5,13 @@ import {
   checkStatementBalanceDiscrepancy,
   BALANCE_DISCREPANCY_DEFAULTS,
 } from '../checkpoints/statement-balance-discrepancy';
+import type { BalanceDiscrepancyParams } from '../checkpoints/statement-balance-discrepancy';
 import { checkAmountDigitDistribution } from '../checkpoints/amount-digit-distribution';
 import { checkClonedTransactionPattern } from '../checkpoints/cloned-transaction-pattern';
 import { checkRoundAmountConcentration } from '../checkpoints/round-amount-concentration';
-import type { ThresholdBand } from '../checkpoints/gambling-utils';
 
 export type DocumentIntegrityThresholds = {
-  'statement-balance-discrepancy': ThresholdBand;
+  'statement-balance-discrepancy': BalanceDiscrepancyParams;
 };
 
 export const DOCUMENT_INTEGRITY_DEFAULT_THRESHOLDS: DocumentIntegrityThresholds = {

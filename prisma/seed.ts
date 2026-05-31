@@ -4,7 +4,10 @@ import { PrismaClient } from '../src/generated/prisma/client';
 import { scrypt, randomBytes } from 'crypto';
 import { promisify } from 'util';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
@@ -106,11 +109,12 @@ const SEED_DATA = [
         name: 'Cross-Border Transfer',
         description: 'Flags transactions involving high-risk foreign jurisdictions and detects multi-currency mixing patterns within a rolling window — indicators of offshore layering.',
       },
-      {
-        slug: 'geographic-risk-scoring',
-        name: 'Geographic Risk Scoring',
-        description: 'Computes a weighted exposure ratio of transaction value flowing through elevated-risk jurisdictions to surface geographic concentration risk.',
-      },
+      // geographic-risk-scoring temporarily disabled — country field excluded from normalize
+      // {
+      //   slug: 'geographic-risk-scoring',
+      //   name: 'Geographic Risk Scoring',
+      //   description: 'Computes a weighted exposure ratio of transaction value flowing through elevated-risk jurisdictions to surface geographic concentration risk.',
+      // },
       {
         slug: 'sanctions-watchlist',
         name: 'Sanctions Watchlist',

@@ -5,7 +5,7 @@ import type { Readable } from 'stream';
 import type * as PdfjsLib from 'pdfjs-dist';
 import type { ParserStrategy, NormalizedTransaction } from './types';
 import { parseTextIntoTransactions, streamToBuffer } from './text-line-parser';
-import { llamaParseBuffer, stripMarkdownTables } from './llama-parse';
+import { llamaParseBuffer, parseLlamaMarkdownToTransactions } from './llama-parse';
 import {
   parseDate,
   parseAmount,
@@ -309,7 +309,7 @@ export class PdfParser implements ParserStrategy {
   ): Promise<{ transactions: NormalizedTransaction[]; skipped: number }> {
     const markdown = await llamaParseBuffer(buffer, 'application/pdf', filename);
     if (markdown) {
-      const result = parseTextIntoTransactions(stripMarkdownTables(markdown));
+      const result = parseLlamaMarkdownToTransactions(markdown);
       if (result.transactions.length > 0) return result;
     }
 

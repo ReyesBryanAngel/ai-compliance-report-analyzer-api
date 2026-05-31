@@ -4,14 +4,12 @@
  *
  * Shows:
  *   1. Raw markdown returned by LlamaParse
- *   2. Plain text after stripping markdown table syntax
- *   3. NormalizedTransaction[] after the full normalization pipeline
+ *   2. NormalizedTransaction[] after column-aware table parsing
  */
 
 import { readFileSync } from 'fs';
 import { extname } from 'path';
-import { llamaParseBuffer, stripMarkdownTables } from './llama-parse';
-import { parseTextIntoTransactions } from './text-line-parser';
+import { llamaParseBuffer, parseLlamaMarkdownToTransactions } from './llama-parse';
 
 const MIME_MAP: Record<string, string> = {
   '.pdf':  'application/pdf',
@@ -45,12 +43,8 @@ void (async () => {
   }
   console.log(markdown);
 
-  console.log('\n── Step 2: After stripping markdown tables ──────────────────────────');
-  const plainText = stripMarkdownTables(markdown);
-  console.log(plainText);
-
-  console.log('\n── Step 3: NormalizedTransaction[] ──────────────────────────────────');
-  const { transactions, skipped } = parseTextIntoTransactions(plainText);
+  console.log('\n── Step 2: NormalizedTransaction[] ──────────────────────────────────');
+  const { transactions, skipped } = parseLlamaMarkdownToTransactions(markdown);
   console.log(JSON.stringify(transactions, null, 2));
   console.log(`\nTotal parsed: ${transactions.length}  |  Skipped: ${skipped}`);
 })();

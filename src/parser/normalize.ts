@@ -3,7 +3,7 @@ import type { NormalizedTransaction } from './types';
 // ── Column alias tables ──────────────────────────────────────────────────────
 
 const DATE_ALIASES = [
-  'date', 'transaction date', 'txn date', 'trans date', 'value date',
+  'date', 'date and time', 'transaction date', 'txn date', 'trans date', 'value date',
   'posting date', 'trans. date', 'transaction dt',
 ];
 

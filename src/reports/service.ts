@@ -70,7 +70,7 @@ async function resolveEnabledCheckpoints(
 async function generateSingleReport(
   doc: { id: string; originalName: string; batchId: string | null },
   transactions: NormalizedTransaction[],
-  workflows: string[],
+  workflow: string,
   prisma: PrismaClient,
   userId: string,
   organizationId: string | null,
@@ -83,16 +83,17 @@ async function generateSingleReport(
     month: 'long',
     day: 'numeric',
   });
+  const workflowLabel = workflow.toUpperCase();
   const reportTitle = titleOverride
-    ? `${titleOverride} — ${doc.originalName}`
-    : `Compliance Report — ${doc.originalName} — ${dateStr}`;
+    ? `${titleOverride} — ${doc.originalName} — ${workflowLabel}`
+    : `Compliance Report — ${doc.originalName} — ${workflowLabel} — ${dateStr}`;
 
   const report = await prisma.report.create({
     data: {
       title: reportTitle,
       status: 'GENERATING',
       documentIds: [doc.id],
-      workflows,
+      workflows: [workflow],
       userId,
       ...(organizationId ? { organizationId } : {}),
     },
@@ -100,7 +101,7 @@ async function generateSingleReport(
 
   try {
 
-    const riskReport = runRiskEngine(transactions, workflows, { thresholds, enabledCheckpoints });
+    const riskReport = runRiskEngine(transactions, [workflow], { thresholds, enabledCheckpoints });
 
     const savedChecks: ReportCheckItem[] = [];
     for (const wfResult of riskReport.workflows) {
@@ -155,7 +156,7 @@ async function generateSingleReport(
       title: reportTitle,
       status: 'COMPLETED',
       documentIds: [doc.id],
-      workflows,
+      workflows: [workflow],
       results: riskReport.workflows,
       checks: savedChecks,
       summary,
@@ -264,18 +265,25 @@ export async function generateReport(
     ...(workflows.includes('traml') ? { traml: await loadTramlThresholds(prisma, organizationId) } : {}),
   };
 
+  const pairs: Array<{ doc: (typeof documents)[number]; workflow: string }> = [];
+  for (const doc of documents) {
+    for (const workflow of workflows) {
+      pairs.push({ doc, workflow });
+    }
+  }
+
   const CONCURRENCY = 3;
-  const results: GenerateReportResponse[] = new Array(documents.length);
+  const results: GenerateReportResponse[] = new Array(pairs.length);
   let idx = 0;
   async function worker() {
-    while (idx < documents.length) {
+    while (idx < pairs.length) {
       const i = idx++;
-      const doc = documents[i];
+      const { doc, workflow } = pairs[i];
       const transactions = doc.parsedData as NormalizedTransaction[];
       results[i] = await generateSingleReport(
         doc,
         transactions,
-        workflows,
+        workflow,
         prisma,
         userId,
         organizationId,
@@ -285,7 +293,7 @@ export async function generateReport(
       );
     }
   }
-  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, documents.length) }, worker));
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, pairs.length) }, worker));
 
   return { reports: results };
 }

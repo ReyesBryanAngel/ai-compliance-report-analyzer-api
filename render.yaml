@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: ai-compliance-report-analyzer-api
+    runtime: node
+    buildCommand: npm install && npm run build && npx prisma migrate deploy
+    startCommand: node dist/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: LLAMA_PARSE_API_KEY
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_BUCKET_NAME
+        sync: false
+      - key: S3_KEY_PREFIX
+        sync: false

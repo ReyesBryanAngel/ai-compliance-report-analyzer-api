@@ -88,7 +88,7 @@ const MONTH_MAP: Record<string, string> = {
   jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
 };
 
-export function parseDate(raw: string | undefined): string | null {
+export function parseDate(raw: string | undefined, format?: 'dmy' | 'mdy'): string | null {
   if (!raw || raw.trim() === '') return null;
   const s = raw.trim();
 
@@ -103,14 +103,13 @@ export function parseDate(raw: string | undefined): string | null {
     if (month) return `${namedMatch[3]}-${month}-${namedMatch[1].padStart(2, '0')}`;
   }
 
-  // MM/DD/YYYY or DD/MM/YYYY — resolve ambiguity by value
+  // MM/DD/YYYY or DD/MM/YYYY — resolve ambiguity by value or caller-supplied hint
   const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (slashMatch) {
     const a = parseInt(slashMatch[1]);
-    const b = parseInt(slashMatch[2]);
     const y = slashMatch[3];
-    if (a > 12) {
-      // Must be DD/MM/YYYY
+    if (format === 'dmy' || a > 12) {
+      // DD/MM/YYYY
       return `${y}-${slashMatch[2].padStart(2, '0')}-${slashMatch[1].padStart(2, '0')}`;
     }
     // Default MM/DD/YYYY (US convention)

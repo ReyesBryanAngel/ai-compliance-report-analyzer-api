@@ -162,7 +162,7 @@ export async function confirmUpload(
   documentId: string,
   prisma: PrismaClient,
   organizationId?: string | null,
-): Promise<void> {
+): Promise<{ batchId: string | null }> {
   const where = organizationId
     ? { id: documentId, organizationId }
     : { id: documentId };
@@ -176,6 +176,8 @@ export async function confirmUpload(
     where: { id: documentId },
     data: { size: head.ContentLength ?? 0 },
   });
+
+  return { batchId: doc.batchId };
 }
 
 export async function streamDocumentFromS3(s3Key: string): Promise<{ stream: Readable; contentLength?: number }> {

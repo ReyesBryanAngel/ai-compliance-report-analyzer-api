@@ -144,8 +144,8 @@ const reportRoutes: FastifyPluginAsync = async (server) => {
     try {
       const { sub: userId, organizationId } = request.user;
       const orgId = organizationId || null;
-      await generateReport(request.body, server.prisma, userId, orgId);
-      return reply.send({ code: 200, status: 'OK', message: 'Report has been created successfully.' });
+      const result = await generateReport(request.body, server.prisma, userId, orgId);
+      return reply.send(result);
     } catch (err) {
       if (err instanceof Error) {
         const code = (err as NodeJS.ErrnoException & { code?: string }).code;

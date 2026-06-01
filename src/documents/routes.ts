@@ -377,14 +377,15 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
       response: {
         200: {
           type: 'object',
-          properties: { ok: { type: 'boolean' } },
+          properties: { message: { type: 'string' } },
         },
       },
     },
   }, async (request, reply) => {
     const orgId = request.user.organizationId || null;
+    let batchId: string | null = null;
     try {
-      await confirmUpload(request.params.id, server.prisma, orgId);
+      ({ batchId } = await confirmUpload(request.params.id, server.prisma, orgId));
     } catch (err) {
       if (err instanceof Error) {
         if (err.message === 'Document not found') return reply.notFound(err.message);
@@ -399,7 +400,14 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
       server.log.error({ docId: request.params.id, err }, 'Background parse failed');
     });
 
-    return reply.send({ ok: true });
+    let count = 1;
+    if (batchId) {
+      count = await server.prisma.document.count({
+        where: { batchId, size: { gt: 0 } },
+      });
+    }
+    const noun = count === 1 ? 'document' : 'documents';
+    return reply.send({ message: `${count} ${noun} uploaded successfully.` });
   });
 
   server.post<{ Params: { id: string }; Reply: ParseResult }>('/:id/parse', {

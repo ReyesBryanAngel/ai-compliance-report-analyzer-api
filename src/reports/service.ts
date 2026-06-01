@@ -295,7 +295,7 @@ export async function generateReport(
   }
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, pairs.length) }, worker));
 
-  return { code: 200, status: 'OK', message: 'Report has been created successfully.' };
+  return { code: 201, status: 'OK', message: `Successfully created ${results.length} ${results.length === 1 ? 'report' : 'reports'}` };
 }
 
 export async function getReport(

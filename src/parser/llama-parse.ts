@@ -123,6 +123,20 @@ export function stripMarkdownTables(markdown: string): string {
     .join('\n');
 }
 
+// Scans date cell strings from a table block to detect DD/MM/YYYY vs MM/DD/YYYY.
+// If any cell has a first component > 12 the format must be DMY; if any has a
+// second component > 12 it must be MDY; otherwise returns undefined (caller
+// falls back to the US-convention default in parseDate).
+function inferDateFormat(dateCells: string[]): 'dmy' | 'mdy' | undefined {
+  for (const cell of dateCells) {
+    const m = cell.trim().match(/^(\d{1,2})\/(\d{1,2})\/\d{4}/);
+    if (!m) continue;
+    if (parseInt(m[1]) > 12) return 'dmy';
+    if (parseInt(m[2]) > 12) return 'mdy';
+  }
+  return undefined;
+}
+
 // Rows whose description cell indicate they are summary/footer rows, not transactions.
 const TABLE_SUMMARY_RE =
   /^(starting balance|ending balance|total\s+(debit|credit)|opening balance|closing balance)/i;
@@ -184,6 +198,18 @@ export function parseLlamaMarkdownToTransactions(markdown: string): {
       if (idx !== -1) colIdx[field] = idx;
     }
 
+    // Pre-scan all date cells in this table to detect DD/MM vs MM/DD format before
+    // committing to any individual row — required when no date has a first component
+    // > 12 (e.g. a UK statement where all days happen to be ≤ 12).
+    const rawDateCells = tableLines
+      .slice(sepIdx + 1)
+      .map((l) => {
+        const c = parseCells(l);
+        return colIdx.date !== undefined ? (c[colIdx.date] ?? '') : '';
+      })
+      .filter(Boolean);
+    const dateFormat = inferDateFormat(rawDateCells);
+
     for (const line of tableLines.slice(sepIdx + 1)) {
       if (/^\|[-| :]+\|$/.test(line.trim())) continue; // skip extra separator rows
 
@@ -202,7 +228,7 @@ export function parseLlamaMarkdownToTransactions(markdown: string): {
       }
 
       const dateRaw = colIdx.date !== undefined ? cells[colIdx.date] : undefined;
-      const date = parseDate(dateRaw?.trim());
+      const date = parseDate(dateRaw?.trim(), dateFormat);
       if (!date) { skipped++; continue; }
 
       const description = descCell.trim();
@@ -219,8 +245,10 @@ export function parseLlamaMarkdownToTransactions(markdown: string): {
       if (creditVal !== null && creditVal > 0) {
         amountNum = creditVal;
         direction = 'inflow';
-      } else if (debitVal !== null && debitVal > 0) {
-        amountNum = debitVal;
+      } else if (debitVal !== null && debitVal !== 0) {
+        // LlamaParse may render debit amounts as negative (-250.00); treat any
+        // non-zero value in the Debit column as an outflow regardless of sign.
+        amountNum = Math.abs(debitVal);
         direction = 'outflow';
       } else if (amountVal !== null && amountVal !== 0) {
         amountNum = Math.abs(amountVal);

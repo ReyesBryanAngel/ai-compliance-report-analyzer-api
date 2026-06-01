@@ -178,6 +178,14 @@ export async function confirmUpload(
   });
 }
 
+export async function streamDocumentFromS3(s3Key: string): Promise<{ stream: Readable; contentLength?: number }> {
+  const response = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: s3Key }));
+  return {
+    stream: response.Body as Readable,
+    contentLength: response.ContentLength,
+  };
+}
+
 export async function parseDocument(documentId: string, prisma: PrismaClient): Promise<ParseResult> {
   const doc = await prisma.document.findUnique({ where: { id: documentId } });
   if (!doc) throw new Error('Document not found');

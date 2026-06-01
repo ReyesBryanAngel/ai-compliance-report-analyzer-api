@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import { saveDocument, parseDocument, createDocumentBatch, getDownloadUrl, createUploadUrl, confirmUpload } from './service';
+import { saveDocument, parseDocument, createDocumentBatch, getDownloadUrl, createUploadUrl, confirmUpload, streamDocumentFromS3 } from './service';
 import type { UploadResponse, UploadedDocument, BatchInfo } from './types';
 import type { ParseResult } from '../parser';
 
@@ -37,6 +37,7 @@ const documentSchema = {
     organizationId: { type: 'string', nullable: true },
     createdAt:      { type: 'string' },
     downloadUrl:    { type: 'string' },
+    parsedData:     { nullable: true },
   },
 };
 
@@ -226,6 +227,7 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
         uploadedById: true,
         organizationId: true,
         createdAt: true,
+        parsedData: true,
       },
     });
 
@@ -233,6 +235,40 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
 
     const downloadUrl = await getDownloadUrl(doc.path);
     return reply.send({ ...doc, createdAt: doc.createdAt.toISOString(), downloadUrl });
+  });
+
+  server.get<{ Params: { id: string } }>('/:id/file', {
+    onRequest: [server.authenticate],
+    schema: {
+      tags: ['Documents'],
+      summary: 'Stream the raw file content through the API (no expiry)',
+      params: {
+        type: 'object',
+        properties: { id: { type: 'string' } },
+        required: ['id'],
+      },
+    },
+  }, async (request, reply) => {
+    const orgId = request.user.organizationId || null;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = { id: request.params.id };
+    if (orgId) where.organizationId = orgId;
+
+    const doc = await server.prisma.document.findFirst({
+      where,
+      select: { path: true, mimeType: true, originalName: true },
+    });
+
+    if (!doc) return reply.notFound('Document not found');
+
+    const { stream, contentLength } = await streamDocumentFromS3(doc.path);
+
+    reply.header('Content-Type', doc.mimeType);
+    reply.header('Content-Disposition', `inline; filename="${encodeURIComponent(doc.originalName)}"`);
+    if (contentLength !== undefined) reply.header('Content-Length', String(contentLength));
+
+    return reply.send(stream);
   });
 
   server.post<{ Body: UploadUrlBody }>('/upload-url', {

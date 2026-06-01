@@ -40,7 +40,9 @@ export interface GenerateReportResponse {
 }
 
 export interface GenerateReportBatchResponse {
-  reports: GenerateReportResponse[];
+  code: number;
+  status: string;
+  message: string;
 }
 
 export interface ListReportDocument {

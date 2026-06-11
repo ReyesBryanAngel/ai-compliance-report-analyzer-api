@@ -2,6 +2,8 @@ import type { PrismaClient } from '../generated/prisma/client';
 import { Prisma } from '../generated/prisma/client';
 import { KYC_DEFAULT_THRESHOLDS } from '../risk-engine/workflows/kyc';
 import type { KycThresholds } from '../risk-engine/workflows/kyc';
+import { SOURCE_OF_FUNDS_DEFAULTS } from '../risk-engine/checkpoints/source-of-funds';
+import type { SourceOfFundsThresholds } from '../risk-engine/checkpoints/source-of-funds';
 import { SG_DEFAULT_THRESHOLDS } from '../risk-engine/workflows/sg';
 import type { SgThresholds } from '../risk-engine/workflows/sg';
 import { TRAML_THRESHOLD_BANDS } from '../risk-engine/workflows/traml';
@@ -38,8 +40,14 @@ import {
 import type { GeographicRiskThresholds } from '../risk-engine/checkpoints/geographic-risk-scoring';
 import type { ThresholdConfigItem } from './types';
 
+// Only band-compatible (greenMax/amberMax) checkpoints are indexed here.
+// Checkpoints with richer threshold shapes (e.g. source-of-funds) are
+// handled separately in their respective loader functions.
 const WORKFLOW_DEFAULTS: Record<string, Record<string, { greenMax: number; amberMax: number }>> = {
-  kyc: KYC_DEFAULT_THRESHOLDS,
+  kyc: {
+    'loan-stacking': KYC_DEFAULT_THRESHOLDS['loan-stacking'],
+    'low-balance-persistence': KYC_DEFAULT_THRESHOLDS['low-balance-persistence'],
+  },
   sg: SG_DEFAULT_THRESHOLDS,
   traml: TRAML_THRESHOLD_BANDS,
   'document-integrity': DOCUMENT_INTEGRITY_DEFAULT_THRESHOLDS,
@@ -226,7 +234,17 @@ export async function loadKycThresholds(
   const result: Partial<KycThresholds> = {};
   for (const c of configs) {
     const slug = c.checkpoint.slug as keyof KycThresholds;
-    result[slug] = { greenMax: c.greenMax, amberMax: c.amberMax };
+    if (slug === 'source-of-funds') {
+      result['source-of-funds'] = {
+        ...SOURCE_OF_FUNDS_DEFAULTS,
+        ...(c.params ? (c.params as Partial<SourceOfFundsThresholds>) : {}),
+      };
+    } else {
+      (result as Record<string, { greenMax: number; amberMax: number }>)[slug] = {
+        greenMax: c.greenMax,
+        amberMax: c.amberMax,
+      };
+    }
   }
   return result;
 }

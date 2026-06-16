@@ -19,7 +19,13 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await server.register(helmet);
   await server.register(cors, {
-    origin: process.env.NODE_ENV === 'production' ? false : true,
+    // origin: process.env.NODE_ENV === 'production' ? false : true,
+    origin: process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+    : true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
   });
   await server.register(sensible);
   await server.register(multipart, {

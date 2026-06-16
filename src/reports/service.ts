@@ -1,9 +1,10 @@
 import type { PrismaClient } from '../generated/prisma/client';
-import { runRiskEngine, SUPPORTED_WORKFLOWS } from '../risk-engine';
+import { runRiskEngine, SUPPORTED_WORKFLOWS, normalizeTransactions } from '../risk-engine';
 import type { NormalizedTransaction } from '../parser/types';
 import type { WorkflowResult } from '../risk-engine/types';
 import { generateNarrative } from '../llm/service';
 import { loadKycThresholds, loadSgThresholds, loadTramlThresholds } from '../thresholds/service';
+import { runAgentSkillWorkflow } from '../agent-skills/runner';
 import type {
   GenerateReportBatchResponse,
   GenerateReportBody,
@@ -67,6 +68,30 @@ async function resolveEnabledCheckpoints(
   return new Set(checkpoints.map((cp) => cp.slug));
 }
 
+async function resolveWorkflowModes(
+  prisma: PrismaClient,
+  organizationId: string | null,
+  workflows: string[],
+): Promise<Map<string, 'CHECKPOINTS' | 'AGENT_SKILL'>> {
+  const map = new Map<string, 'CHECKPOINTS' | 'AGENT_SKILL'>();
+  if (!organizationId) {
+    workflows.forEach((w) => map.set(w, 'AGENT_SKILL'));
+    return map;
+  }
+
+  const configs = await prisma.orgWorkflowConfig.findMany({
+    where: {
+      organizationId,
+      workflow: { slug: { in: workflows } },
+    },
+    include: { workflow: true },
+  });
+
+  const configBySlug = new Map(configs.map((c) => [c.workflow.slug, c.mode as 'CHECKPOINTS' | 'AGENT_SKILL']));
+  workflows.forEach((w) => map.set(w, configBySlug.get(w) ?? 'AGENT_SKILL'));
+  return map;
+}
+
 async function generateSingleReport(
   doc: { id: string; originalName: string; batchId: string | null },
   transactions: NormalizedTransaction[],
@@ -76,6 +101,7 @@ async function generateSingleReport(
   organizationId: string | null,
   enabledCheckpoints: Set<string>,
   thresholds: Record<string, unknown>,
+  workflowMode: 'CHECKPOINTS' | 'AGENT_SKILL',
   titleOverride?: string,
 ): Promise<GenerateReportResponse> {
   const dateStr = new Date().toLocaleDateString('en-US', {
@@ -100,19 +126,35 @@ async function generateSingleReport(
   });
 
   try {
+    let wfResult: WorkflowResult;
 
-    const riskReport = runRiskEngine(transactions, [workflow], { thresholds, enabledCheckpoints });
+    if (workflowMode === 'AGENT_SKILL') {
+      const numericTxs = normalizeTransactions(transactions);
+      wfResult = await runAgentSkillWorkflow(
+        {
+          workflowSlug: workflow,
+          organizationId,
+          transactions: numericTxs,
+          metadata: { documentName: doc.originalName },
+        },
+        prisma,
+      );
+    } else {
+      const riskEngineReport = runRiskEngine(transactions, [workflow], { thresholds, enabledCheckpoints });
+      wfResult = riskEngineReport.workflows[0];
+    }
 
+    const riskReport = { workflows: [wfResult] };
     const savedChecks: ReportCheckItem[] = [];
-    for (const wfResult of riskReport.workflows) {
-      for (const finding of wfResult.findings) {
+    for (const wf of riskReport.workflows) {
+      for (const finding of wf.findings) {
         const check = await prisma.complianceCheck.create({
           data: {
             reportId: report.id,
             rule: finding.checkpoint,
             passed: !finding.triggered,
             details: JSON.stringify({
-              workflow: wfResult.workflow,
+              workflow: wf.workflow,
               severity: finding.severity,
               score: finding.score,
               reason: finding.reason,
@@ -257,12 +299,16 @@ export async function generateReport(
     );
   }
 
-  // Resolve shared config once for all documents
-  const enabledCheckpoints = await resolveEnabledCheckpoints(prisma, workflows, organizationId);
+  // Resolve workflow modes — AGENT_SKILL workflows bypass the risk engine
+  const workflowModes = await resolveWorkflowModes(prisma, organizationId, workflows);
+
+  // Only load checkpoint config for CHECKPOINTS-mode workflows (harmless for AGENT_SKILL but skips unnecessary queries)
+  const checkpointWorkflows = workflows.filter((w) => workflowModes.get(w) === 'CHECKPOINTS');
+  const enabledCheckpoints = await resolveEnabledCheckpoints(prisma, checkpointWorkflows, organizationId);
   const thresholds = {
-    ...(workflows.includes('kyc') ? { kyc: await loadKycThresholds(prisma, organizationId) } : {}),
-    ...(workflows.includes('sg') ? { sg: await loadSgThresholds(prisma, organizationId) } : {}),
-    ...(workflows.includes('traml') ? { traml: await loadTramlThresholds(prisma, organizationId) } : {}),
+    ...(checkpointWorkflows.includes('kyc') ? { kyc: await loadKycThresholds(prisma, organizationId) } : {}),
+    ...(checkpointWorkflows.includes('sg') ? { sg: await loadSgThresholds(prisma, organizationId) } : {}),
+    ...(checkpointWorkflows.includes('traml') ? { traml: await loadTramlThresholds(prisma, organizationId) } : {}),
   };
 
   const pairs: Array<{ doc: (typeof documents)[number]; workflow: string }> = [];
@@ -289,6 +335,7 @@ export async function generateReport(
         organizationId,
         enabledCheckpoints,
         thresholds,
+        workflowModes.get(workflow) ?? 'CHECKPOINTS',
         title,
       );
     }

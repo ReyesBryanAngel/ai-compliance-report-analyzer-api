@@ -35,10 +35,15 @@ const OUTPUT_SCHEMA = {
 
 let anthropic: Anthropic | null = null;
 
-function getClient(): Anthropic | null {
+export function getAnthropicClient(): Anthropic | null {
   if (!process.env.ANTHROPIC_API_KEY) return null;
   if (!anthropic) anthropic = new Anthropic();
   return anthropic;
+}
+
+/** @deprecated use getAnthropicClient */
+function getClient(): Anthropic | null {
+  return getAnthropicClient();
 }
 
 export async function generateNarrative(

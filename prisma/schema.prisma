@@ -8,32 +8,35 @@ datasource db {
 }
 
 model Organization {
-  id                  String                  @id @default(uuid())
-  name                String
-  slug                String                  @unique
-  createdAt           DateTime                @default(now())
-  updatedAt           DateTime                @updatedAt
-  users               User[]
-  reports             Report[]
-  documents           Document[]
-  checkpointOverrides OrgCheckpointOverride[]
-  thresholdConfigs    OrgThresholdConfig[]
+  id                     String                  @id @default(uuid())
+  name                   String
+  slug                   String                  @unique
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  users                  User[]
+  reports                Report[]
+  documents              Document[]
+  checkpointOverrides    OrgCheckpointOverride[]
+  thresholdConfigs       OrgThresholdConfig[]
+  workflowConfigs        OrgWorkflowConfig[]
+  agentSkillInstructions AgentSkillInstruction[]
 
   @@map("organizations")
 }
 
 model User {
-  id             String         @id @default(uuid())
-  email          String         @unique
-  name           String?
-  password       String
-  organizationId String?
-  organization   Organization?  @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  reports        Report[]
-  documents      Document[]
-  refreshTokens  RefreshToken[]
+  id                     String                  @id @default(uuid())
+  email                  String                  @unique
+  name                   String?
+  password               String
+  organizationId         String?
+  organization           Organization?           @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  reports                Report[]
+  documents              Document[]
+  refreshTokens          RefreshToken[]
+  agentSkillInstructions AgentSkillInstruction[]
 
   @@map("users")
 }
@@ -124,14 +127,16 @@ enum DocumentStatus {
 }
 
 model Workflow {
-  id          String       @id @default(uuid())
-  slug        String       @unique
-  name        String
-  description String?      @db.Text
-  enabled     Boolean      @default(true)
-  checkpoints Checkpoint[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                     String                  @id @default(uuid())
+  slug                   String                  @unique
+  name                   String
+  description            String?                 @db.Text
+  enabled                Boolean                 @default(true)
+  checkpoints            Checkpoint[]
+  orgConfigs             OrgWorkflowConfig[]
+  agentSkillInstructions AgentSkillInstruction[]
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
 
   @@map("workflows")
 }
@@ -178,4 +183,41 @@ model OrgThresholdConfig {
 
   @@unique([organizationId, checkpointId])
   @@map("org_threshold_configs")
+}
+
+enum WorkflowMode {
+  CHECKPOINTS
+  AGENT_SKILL
+}
+
+model OrgWorkflowConfig {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workflowId     String
+  workflow       Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  mode           WorkflowMode @default(CHECKPOINTS)
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, workflowId])
+  @@map("org_workflow_configs")
+}
+
+model AgentSkillInstruction {
+  id             String        @id @default(uuid())
+  workflowId     String
+  workflow       Workflow      @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  version        Int
+  title          String?
+  content        String        @db.Text
+  isActive       Boolean       @default(false)
+  createdById    String?
+  createdBy      User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([workflowId, organizationId, version])
+  @@map("agent_skill_instructions")
 }

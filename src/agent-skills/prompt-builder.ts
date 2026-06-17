@@ -31,7 +31,9 @@ ${schemaJson}
 Rules:
 - Each finding MUST include a "checkpoint" slug, "triggered" (true if risk detected), "severity" ("low"/"medium"/"high"), "score" (0-100), "reason" (human-readable explanation), and "evidenceIndices" (0-based indices into the transaction array).
 - Score range: 0 = no risk, 100 = maximum risk.
-- Only set triggered=true when you have clear evidence of the described risk pattern.
+- IMPORTANT: Complete your full analysis before committing to "triggered", "score", and "severity". These fields MUST reflect your FINAL conclusion after verification — not an initial hypothesis. If your investigation concludes the risk pattern is NOT present, you MUST set triggered=false, score=0, severity="low".
+- The "reason" field must open with your conclusion ("No discrepancies detected." / "X discrepancies found."), then briefly explain your verification. Do NOT use "reason" as a scratchpad — state the conclusion first.
+- triggered=true and score>0 are only valid when your final conclusion confirms the risk pattern is present with concrete evidence.
 - evidenceIndices must reference valid 0-based positions in the transaction array provided. Use an empty array [] if there is no specific evidence.
 
 ## Checkpoint Catalog

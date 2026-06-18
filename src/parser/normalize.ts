@@ -46,7 +46,9 @@ const CURRENCY_ALIASES = [
 // ── Column finder ────────────────────────────────────────────────────────────
 
 export function findColumn(headers: string[], aliases: string[]): string | undefined {
-  const normalized = headers.map((h) => h.toLowerCase().trim());
+  // Strip parenthetical currency/unit designators like "(USD)" or "(PHP)" so that
+  // "Debit (USD)" still matches the alias "debit".
+  const normalized = headers.map((h) => h.toLowerCase().trim().replace(/\s*\([^)]*\)\s*$/, '').trim());
   for (const alias of aliases) {
     const idx = normalized.indexOf(alias.toLowerCase());
     if (idx !== -1) return headers[idx];

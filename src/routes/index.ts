@@ -8,6 +8,7 @@ import authRoutes from '../auth/routes';
 import organizationRoutes from '../organizations/routes';
 import workflowConfigRoutes from '../workflow-config/routes';
 import smeInstructionRoutes from '../sme-instructions/routes';
+import workflowExecutionRoutes from '../workflow-executions/routes';
 
 export async function registerRoutes(server: FastifyInstance): Promise<void> {
   server.register(healthRoutes, { prefix: '/api/v1' });
@@ -19,4 +20,5 @@ export async function registerRoutes(server: FastifyInstance): Promise<void> {
   server.register(workflowRoutes, { prefix: '/api/v1/workflows' });
   server.register(workflowConfigRoutes, { prefix: '/api/v1/workflow-config' });
   server.register(smeInstructionRoutes, { prefix: '/api/v1/workflows' });
+  server.register(workflowExecutionRoutes, { prefix: '/api/v1' });
 }

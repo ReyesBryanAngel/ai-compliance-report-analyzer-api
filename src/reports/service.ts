@@ -135,6 +135,7 @@ async function generateSingleReport(
           workflowSlug: workflow,
           organizationId,
           transactions: numericTxs,
+          reportId: report.id,
           metadata: { documentName: doc.originalName },
         },
         prisma,

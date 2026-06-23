@@ -6,13 +6,13 @@ import type { AgentSkillOutput } from '../agent-skills/schema';
 export async function generateAgentSkillFindings(
   system: string,
   user: string,
-): Promise<{ data: AgentSkillOutput; raw: string }> {
+): Promise<{ data: AgentSkillOutput; raw: string; usage: { promptTokens: number; completionTokens: number } }> {
   const client = getAnthropicClient();
   if (!client) {
     throw new AgentSkillExecutionError('ANTHROPIC_API_KEY is not configured');
   }
 
-  const model = process.env.ANTHROPIC_AGENT_SKILL_MODEL || 'claude-sonnet-4-6';
+  const model = process.env.ANTHROPIC_AGENT_SKILL_MODEL || 'claude-haiku-4-5-20251001';
 
   const response = await client.messages.create({
     model,
@@ -38,5 +38,12 @@ export async function generateAgentSkillFindings(
     throw new AgentSkillExecutionError('Model returned no text content');
   }
 
-  return { data: JSON.parse(textBlock.text) as AgentSkillOutput, raw: textBlock.text };
+  return {
+    data: JSON.parse(textBlock.text) as AgentSkillOutput,
+    raw: textBlock.text,
+    usage: {
+      promptTokens: response.usage.input_tokens,
+      completionTokens: response.usage.output_tokens,
+    },
+  };
 }

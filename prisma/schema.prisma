@@ -54,19 +54,20 @@ model RefreshToken {
 }
 
 model Report {
-  id             String            @id @default(uuid())
-  title          String?
-  content        String?           @db.Text
-  status         ReportStatus      @default(GENERATING)
-  userId         String?
-  user           User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
-  organizationId String?
-  organization   Organization?     @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  checks         ComplianceCheck[]
-  documentIds    String[]          @default([])
-  workflows      String[]          @default([])
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  id                 String               @id @default(uuid())
+  title              String?
+  content            String?              @db.Text
+  status             ReportStatus         @default(GENERATING)
+  userId             String?
+  user               User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organizationId     String?
+  organization       Organization?        @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  checks             ComplianceCheck[]
+  workflowExecutions WorkflowExecution[]
+  documentIds        String[]             @default([])
+  workflows          String[]             @default([])
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 
   @@map("reports")
 }
@@ -220,4 +221,77 @@ model AgentSkillInstruction {
 
   @@unique([workflowId, organizationId, version])
   @@map("agent_skill_instructions")
+}
+
+enum ExecutionStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum AgentMessageRole {
+  SYSTEM
+  USER
+  ASSISTANT
+}
+
+model WorkflowExecution {
+  id           String            @id @default(uuid())
+  reportId     String
+  report       Report            @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  workflowSlug String
+  mode         WorkflowMode
+  status       ExecutionStatus   @default(RUNNING)
+  overallScore Int?
+  error        String?           @db.Text
+  startedAt    DateTime          @default(now())
+  completedAt  DateTime?
+  conversation AgentConversation?
+
+  @@index([reportId])
+  @@map("workflow_executions")
+}
+
+model AgentConversation {
+  id                  String            @id @default(uuid())
+  workflowExecutionId String            @unique
+  workflowExecution   WorkflowExecution @relation(fields: [workflowExecutionId], references: [id], onDelete: Cascade)
+  executions          AgentExecution[]
+  createdAt           DateTime          @default(now())
+
+  @@map("agent_conversations")
+}
+
+model AgentExecution {
+  id               String            @id @default(uuid())
+  conversationId   String
+  conversation     AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  skillSlug        String
+  provider         String
+  model            String
+  sequence         Int               @default(1)
+  status           ExecutionStatus   @default(RUNNING)
+  promptTokens     Int?
+  completionTokens Int?
+  latencyMs        Int?
+  error            String?           @db.Text
+  messages         AgentMessage[]
+  startedAt        DateTime          @default(now())
+  completedAt      DateTime?
+
+  @@index([conversationId])
+  @@map("agent_executions")
+}
+
+model AgentMessage {
+  id               String           @id @default(uuid())
+  agentExecutionId String
+  agentExecution   AgentExecution   @relation(fields: [agentExecutionId], references: [id], onDelete: Cascade)
+  role             AgentMessageRole
+  content          String           @db.Text
+  sequence         Int
+  createdAt        DateTime         @default(now())
+
+  @@index([agentExecutionId])
+  @@map("agent_messages")
 }

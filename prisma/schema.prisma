@@ -37,6 +37,7 @@ model User {
   documents              Document[]
   refreshTokens          RefreshToken[]
   agentSkillInstructions AgentSkillInstruction[]
+  reportConversations    ReportConversation[]
 
   @@map("users")
 }
@@ -54,20 +55,21 @@ model RefreshToken {
 }
 
 model Report {
-  id                 String               @id @default(uuid())
-  title              String?
-  content            String?              @db.Text
-  status             ReportStatus         @default(GENERATING)
-  userId             String?
-  user               User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
-  organizationId     String?
-  organization       Organization?        @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  checks             ComplianceCheck[]
-  workflowExecutions WorkflowExecution[]
-  documentIds        String[]             @default([])
-  workflows          String[]             @default([])
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  id                  String               @id @default(uuid())
+  title               String?
+  content             String?              @db.Text
+  status              ReportStatus         @default(GENERATING)
+  userId              String?
+  user                User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organizationId      String?
+  organization        Organization?        @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  checks              ComplianceCheck[]
+  workflowExecutions  WorkflowExecution[]
+  reportConversations ReportConversation[]
+  documentIds         String[]             @default([])
+  workflows           String[]             @default([])
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 
   @@map("reports")
 }
@@ -115,6 +117,7 @@ model Document {
   uploadedBy     User?          @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
   organizationId String?
   organization   Organization?  @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  parseJob       ParseJob?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
@@ -122,6 +125,28 @@ model Document {
 }
 
 enum DocumentStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model ParseJob {
+  id          String         @id @default(uuid())
+  documentId  String         @unique
+  document    Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  status      ParseJobStatus @default(QUEUED)
+  attempts    Int            @default(0)
+  maxAttempts Int            @default(3)
+  error       String?
+  queuedAt    DateTime       @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  @@map("parse_jobs")
+}
+
+enum ParseJobStatus {
+  QUEUED
   PROCESSING
   COMPLETED
   FAILED
@@ -294,4 +319,41 @@ model AgentMessage {
 
   @@index([agentExecutionId])
   @@map("agent_messages")
+}
+
+enum ConversationMessageRole {
+  USER
+  ASSISTANT
+}
+
+model ReportConversation {
+  id        String                      @id @default(uuid())
+  reportId  String
+  userId    String?
+  createdAt DateTime                    @default(now())
+  updatedAt DateTime                    @updatedAt
+  report    Report                      @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user      User?                       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  messages  ReportConversationMessage[]
+
+  @@index([reportId])
+  @@map("report_conversations")
+}
+
+model ReportConversationMessage {
+  id               String                  @id @default(uuid())
+  conversationId   String
+  role             ConversationMessageRole
+  content          String                  @db.Text
+  sequence         Int
+  model            String?
+  provider         String?
+  promptTokens     Int?
+  completionTokens Int?
+  latencyMs        Int?
+  createdAt        DateTime                @default(now())
+  conversation     ReportConversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, sequence])
+  @@map("report_conversation_messages")
 }

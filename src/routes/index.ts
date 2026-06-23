@@ -9,6 +9,7 @@ import organizationRoutes from '../organizations/routes';
 import workflowConfigRoutes from '../workflow-config/routes';
 import smeInstructionRoutes from '../sme-instructions/routes';
 import workflowExecutionRoutes from '../workflow-executions/routes';
+import { reportConversationRoutes } from '../report-conversations/routes';
 
 export async function registerRoutes(server: FastifyInstance): Promise<void> {
   server.register(healthRoutes, { prefix: '/api/v1' });
@@ -16,6 +17,7 @@ export async function registerRoutes(server: FastifyInstance): Promise<void> {
   server.register(organizationRoutes, { prefix: '/api/v1/organizations' });
   server.register(documentRoutes, { prefix: '/api/v1/documents' });
   server.register(reportRoutes, { prefix: '/api/v1/reports' });
+  server.register(reportConversationRoutes, { prefix: '/api/v1/reports' });
   server.register(thresholdRoutes, { prefix: '/api/v1/thresholds' });
   server.register(workflowRoutes, { prefix: '/api/v1/workflows' });
   server.register(workflowConfigRoutes, { prefix: '/api/v1/workflow-config' });

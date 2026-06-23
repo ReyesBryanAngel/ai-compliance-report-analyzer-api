@@ -12,6 +12,35 @@ const BASE_URL = 'https://api.cloud.llamaindex.ai/api/parsing';
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLL_ATTEMPTS = 20; // up to ~60 seconds
 
+class Semaphore {
+  private slots: number;
+  private readonly waiting: Array<() => void> = [];
+
+  constructor(capacity: number) {
+    this.slots = capacity;
+  }
+
+  acquire(): Promise<void> {
+    if (this.slots > 0) {
+      this.slots--;
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => this.waiting.push(resolve));
+  }
+
+  release(): void {
+    const next = this.waiting.shift();
+    if (next) {
+      next();
+    } else {
+      this.slots++;
+    }
+  }
+}
+
+// Caps concurrent LlamaParse API calls to the Pro plan limit of 20 slots.
+const llamaParseSemaphore = new Semaphore(20);
+
 // Instructs LlamaParse to focus on financial transaction tables rather than
 // general document layout — improves extraction quality for bank statements
 // and utility bills without requiring a custom schema.
@@ -44,54 +73,59 @@ export async function llamaParseBuffer(
   const apiKey = process.env.LLAMA_PARSE_API_KEY;
   if (!apiKey) return null;
 
-  let jobId: string;
+  await llamaParseSemaphore.acquire();
   try {
-    const arrayBuf = buffer.buffer.slice(
-      buffer.byteOffset,
-      buffer.byteOffset + buffer.byteLength,
-    ) as ArrayBuffer;
-
-    const form = new FormData();
-    form.append('file', new Blob([arrayBuf], { type: mimeType }), filename);
-    form.append('parsing_instruction', PARSING_INSTRUCTION);
-
-    const uploadRes = await fetch(`${BASE_URL}/upload`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}` },
-      body: form,
-    });
-    if (!uploadRes.ok) return null;
-    const upload = (await uploadRes.json()) as UploadResponse;
-    jobId = upload.id;
-  } catch {
-    return null;
-  }
-
-  for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
-    await sleep(POLL_INTERVAL_MS);
+    let jobId: string;
     try {
-      const jobRes = await fetch(`${BASE_URL}/job/${jobId}`, {
+      const arrayBuf = buffer.buffer.slice(
+        buffer.byteOffset,
+        buffer.byteOffset + buffer.byteLength,
+      ) as ArrayBuffer;
+
+      const form = new FormData();
+      form.append('file', new Blob([arrayBuf], { type: mimeType }), filename);
+      form.append('parsing_instruction', PARSING_INSTRUCTION);
+
+      const uploadRes = await fetch(`${BASE_URL}/upload`, {
+        method: 'POST',
         headers: { Authorization: `Bearer ${apiKey}` },
+        body: form,
       });
-      if (!jobRes.ok) return null;
-
-      const job = (await jobRes.json()) as JobResponse;
-      if (job.status === 'ERROR') return null;
-
-      if (job.status === 'SUCCESS') {
-        const resultRes = await fetch(`${BASE_URL}/job/${jobId}/result/markdown`, {
-          headers: { Authorization: `Bearer ${apiKey}` },
-        });
-        if (!resultRes.ok) return null;
-        const result = (await resultRes.json()) as ResultResponse;
-        return result.markdown ?? null;
-      }
+      if (!uploadRes.ok) return null;
+      const upload = (await uploadRes.json()) as UploadResponse;
+      jobId = upload.id;
     } catch {
       return null;
     }
-  }
 
-  return null; // polling timeout
+    for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+      await sleep(POLL_INTERVAL_MS);
+      try {
+        const jobRes = await fetch(`${BASE_URL}/job/${jobId}`, {
+          headers: { Authorization: `Bearer ${apiKey}` },
+        });
+        if (!jobRes.ok) return null;
+
+        const job = (await jobRes.json()) as JobResponse;
+        if (job.status === 'ERROR') return null;
+
+        if (job.status === 'SUCCESS') {
+          const resultRes = await fetch(`${BASE_URL}/job/${jobId}/result/markdown`, {
+            headers: { Authorization: `Bearer ${apiKey}` },
+          });
+          if (!resultRes.ok) return null;
+          const result = (await resultRes.json()) as ResultResponse;
+          return result.markdown ?? null;
+        }
+      } catch {
+        return null;
+      }
+    }
+
+    return null; // polling timeout
+  } finally {
+    llamaParseSemaphore.release();
+  }
 }
 
 /**

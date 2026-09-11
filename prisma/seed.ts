@@ -151,6 +151,19 @@ const SEED_DATA = [
   },
 ];
 
+function buildDefaultInstruction(wf: (typeof SEED_DATA)[number]): string {
+  const checkpointLines = wf.checkpoints
+    .map((cp) => `- ${cp.slug} — ${cp.name}: ${cp.description}`)
+    .join('\n');
+  return `You are reviewing transactions for the "${wf.name}" compliance workflow.
+
+For each topic below, assess whether the transactions exhibit the described pattern. When a finding corresponds to one of these topics, use its checkpoint slug:
+
+${checkpointLines}
+
+If you identify a risk pattern not covered above, create a finding with a new checkpoint slug prefixed "ai-" (e.g. "ai-unusual-merchant-category").`;
+}
+
 async function main() {
   console.log('Seeding workflows and checkpoints...');
 
@@ -170,6 +183,23 @@ async function main() {
           slug: cp.slug,
           name: cp.name,
           description: cp.description,
+        },
+      });
+    }
+
+    // Seed global-default AgentSkillInstruction (organizationId = null, version = 1, isActive = true)
+    const existingInstruction = await prisma.agentSkillInstruction.findFirst({
+      where: { workflowId: workflow.id, organizationId: null, version: 1 },
+    });
+    if (!existingInstruction) {
+      await prisma.agentSkillInstruction.create({
+        data: {
+          workflowId: workflow.id,
+          organizationId: null,
+          version: 1,
+          title: `Default ${wf.name} instruction`,
+          content: buildDefaultInstruction(wf),
+          isActive: true,
         },
       });
     }

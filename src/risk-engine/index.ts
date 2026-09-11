@@ -20,12 +20,17 @@ export type RiskEngineOptions = {
   enabledCheckpoints?: Set<string>;
 };
 
-function normalizeAmounts(transactions: NormalizedTransaction[]): NumericTransaction[] {
+export function normalizeTransactions(transactions: NormalizedTransaction[]): NumericTransaction[] {
   return transactions.map((tx) => ({
     ...tx,
     amount: parseFloat(tx.amount),
     balance: tx.balance !== undefined ? parseFloat(tx.balance) : undefined,
   }));
+}
+
+/** @deprecated use normalizeTransactions */
+function normalizeAmounts(transactions: NormalizedTransaction[]): NumericTransaction[] {
+  return normalizeTransactions(transactions);
 }
 
 export function runRiskEngine(

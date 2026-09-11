@@ -94,9 +94,7 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
       try {
         const doc = await saveDocument(part, server.prisma, uploadedById, orgId);
         uploaded.push(doc);
-        parseDocument(doc.id, server.prisma).catch((err: unknown) => {
-          server.log.error({ docId: doc.id, err }, 'Background parse failed');
-        });
+        await server.parseQueue.enqueue(doc.id, server.prisma);
       } catch (err) {
         part.file.resume();
         failed.push({
@@ -193,6 +191,80 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
     );
 
     return reply.send({ documents: documentsWithUrls });
+  });
+
+  server.get('/queue/status', {
+    onRequest: [server.authenticate],
+    schema: {
+      tags: ['Documents'],
+      summary: 'Get aggregate counts for the parse job queue',
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            queued:     { type: 'number' },
+            processing: { type: 'number' },
+            completed:  { type: 'number' },
+            failed:     { type: 'number' },
+          },
+        },
+      },
+    },
+  }, async (_request, reply) => {
+    const [queued, processing, completed, failed] = await Promise.all([
+      server.prisma.parseJob.count({ where: { status: 'QUEUED' } }),
+      server.prisma.parseJob.count({ where: { status: 'PROCESSING' } }),
+      server.prisma.parseJob.count({ where: { status: 'COMPLETED' } }),
+      server.prisma.parseJob.count({ where: { status: 'FAILED' } }),
+    ]);
+    return reply.send({ queued, processing, completed, failed });
+  });
+
+  server.get<{ Params: { id: string } }>('/:id/parse-status', {
+    onRequest: [server.authenticate],
+    schema: {
+      tags: ['Documents'],
+      summary: 'Get the parse job status for a specific document',
+      params: {
+        type: 'object',
+        properties: { id: { type: 'string' } },
+        required: ['id'],
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            status:       { type: 'string' },
+            queuePosition: { type: 'number', nullable: true },
+            attempts:     { type: 'number' },
+            startedAt:    { type: 'string', nullable: true },
+            completedAt:  { type: 'string', nullable: true },
+            error:        { type: 'string', nullable: true },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const job = await server.prisma.parseJob.findUnique({
+      where: { documentId: request.params.id },
+    });
+    if (!job) return reply.notFound('No parse job found for this document');
+
+    let queuePosition: number | null = null;
+    if (job.status === 'QUEUED') {
+      queuePosition = await server.prisma.parseJob.count({
+        where: { status: 'QUEUED', queuedAt: { lt: job.queuedAt } },
+      });
+    }
+
+    return reply.send({
+      status: job.status,
+      queuePosition,
+      attempts: job.attempts,
+      startedAt: job.startedAt?.toISOString() ?? null,
+      completedAt: job.completedAt?.toISOString() ?? null,
+      error: job.error ?? null,
+    });
   });
 
   server.get<{ Params: { id: string } }>('/:id', {
@@ -396,9 +468,7 @@ const documentRoutes: FastifyPluginAsync = async (server) => {
       throw err;
     }
 
-    parseDocument(request.params.id, server.prisma).catch((err: unknown) => {
-      server.log.error({ docId: request.params.id, err }, 'Background parse failed');
-    });
+    await server.parseQueue.enqueue(request.params.id, server.prisma);
 
     let count = 1;
     if (batchId) {

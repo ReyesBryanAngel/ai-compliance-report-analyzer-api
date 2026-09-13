@@ -63,7 +63,8 @@ function sleep(ms: number): Promise<void> {
 /**
  * Sends a file buffer to LlamaParse and returns the extracted markdown, or
  * null if the API key is absent, the job fails, or a network error occurs.
- * The caller is responsible for falling back to a local parser on null.
+ * PdfParser/ImageParser treat a null result as a hard failure — there is no
+ * local extraction fallback, so the caller should throw a clear error.
  */
 export async function llamaParseBuffer(
   buffer: Buffer,

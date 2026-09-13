@@ -73,7 +73,7 @@ export const DEFAULT_INSTRUCTIONS: Record<string, string> = {
 
 Assess whether the transactions exhibit the described pattern for each topic below:
 
-- recurring-salary — Recurring Salary: Detects stable, recurring salary inflows using a 5-signal confidence model.
+- recurring-salary — Recurring Salary: Detects stable, recurring salary inflows using a 5-signal confidence model. RISK POLARITY IS INVERTED: the risk to flag is the ABSENCE or weakness of a recurring salary signal, not its presence. A confirmed, high-confidence salary pattern is the LOW-risk (triggered=false, score=0) outcome; no salary detected or a weak/inconsistent pattern is the HIGH-risk (triggered=true, high score) outcome that should be reported.
 - income-consistency — Income Consistency: Measures month-over-month income stability via coefficient of variation and trend analysis.
 - loan-stacking — Loan Stacking Indicators: Counts loan disbursement inflows to detect multiple concurrent credit facilities.
 - low-balance-persistence — Low Balance Persistence: Counts months where the end-of-month balance was below 20% of average monthly inflow.

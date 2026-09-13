@@ -141,7 +141,7 @@ export async function buildReportContext(
   if (report.workflowExecutions.length > 0) {
     sections.push('## Workflow Execution Audit');
     for (const exec of report.workflowExecutions) {
-      sections.push(`### Execution: ${exec.workflowSlug} (${exec.mode})`);
+      sections.push(`### Execution: ${exec.workflowSlug}`);
       sections.push(`- Status: ${exec.status}`);
       sections.push(`- Overall Score: ${exec.overallScore ?? 'n/a'}`);
       sections.push(`- Started: ${exec.startedAt.toISOString()}`);

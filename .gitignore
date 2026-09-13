@@ -8,3 +8,5 @@ uploads/
 samples/
 .env
 test-data
+CLAUDE.md
+ARCHITECTURE.md

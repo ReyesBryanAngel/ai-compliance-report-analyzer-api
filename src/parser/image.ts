@@ -1,12 +1,9 @@
 import { readFileSync } from 'fs';
-import { createWorker } from 'tesseract.js';
 import type { Readable } from 'stream';
 import type { ParserStrategy, NormalizedTransaction } from './types';
 import { parseTextIntoTransactions, streamToBuffer } from './text-line-parser';
 import { llamaParseBuffer, stripMarkdownTables } from './llama-parse';
 
-// tesseract.js language data is downloaded on first use (~4 MB) and cached
-// locally in the OS temp directory. Subsequent calls are fast.
 export class ImageParser implements ParserStrategy {
   private readonly mimeType: string;
 
@@ -28,20 +25,12 @@ export class ImageParser implements ParserStrategy {
     filename: string,
   ): Promise<{ transactions: NormalizedTransaction[]; skipped: number }> {
     const markdown = await llamaParseBuffer(buffer, this.mimeType, filename);
-    if (markdown) {
-      const result = parseTextIntoTransactions(stripMarkdownTables(markdown));
-      if (result.transactions.length > 0) return result;
+    if (!markdown) {
+      throw new Error(
+        'LlamaParse could not parse this image (check LLAMA_PARSE_API_KEY and the LlamaParse service status)',
+      );
     }
 
-    // Fallback: local Tesseract OCR
-    const worker = await createWorker('eng');
-    try {
-      const {
-        data: { text },
-      } = await worker.recognize(buffer);
-      return parseTextIntoTransactions(text);
-    } finally {
-      await worker.terminate();
-    }
+    return parseTextIntoTransactions(stripMarkdownTables(markdown));
   }
 }

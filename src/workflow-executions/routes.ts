@@ -14,7 +14,6 @@ const executionSummarySchema = {
     id:           { type: 'string' },
     reportId:     { type: 'string' },
     workflowSlug: { type: 'string' },
-    mode:         { type: 'string', enum: ['CHECKPOINTS', 'AGENT_SKILL'] },
     status:       { type: 'string', enum: ['RUNNING', 'COMPLETED', 'FAILED'] },
     overallScore: { type: 'number', nullable: true },
     error:        { type: 'string', nullable: true },
@@ -107,7 +106,6 @@ const workflowExecutionRoutes: FastifyPluginAsync = async (server) => {
     Querystring: {
       status?: string;
       workflowSlug?: string;
-      mode?: string;
       reportId?: string;
       from?: string;
       to?: string;
@@ -124,7 +122,6 @@ const workflowExecutionRoutes: FastifyPluginAsync = async (server) => {
         properties: {
           status:       { type: 'string', enum: ['RUNNING', 'COMPLETED', 'FAILED'] },
           workflowSlug: { type: 'string' },
-          mode:         { type: 'string', enum: ['CHECKPOINTS', 'AGENT_SKILL'] },
           reportId:     { type: 'string' },
           from:         { type: 'string', description: 'ISO 8601 lower bound on startedAt' },
           to:           { type: 'string', description: 'ISO 8601 upper bound on startedAt' },
@@ -144,12 +141,11 @@ const workflowExecutionRoutes: FastifyPluginAsync = async (server) => {
     },
   }, async (request, reply) => {
     const orgId = request.user.organizationId || null;
-    const { status, workflowSlug, mode, reportId, from, to, cursor, limit } = request.query;
+    const { status, workflowSlug, reportId, from, to, cursor, limit } = request.query;
 
     const filters: ExecutionFilters = {
       ...(status ? { status: status as ExecutionFilters['status'] } : {}),
       ...(workflowSlug ? { workflowSlug } : {}),
-      ...(mode ? { mode: mode as ExecutionFilters['mode'] } : {}),
       ...(reportId ? { reportId } : {}),
       ...(from ? { from } : {}),
       ...(to ? { to } : {}),

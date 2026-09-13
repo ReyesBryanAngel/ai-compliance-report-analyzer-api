@@ -24,7 +24,6 @@ function toExecutionSummary(row: {
   id: string;
   reportId: string;
   workflowSlug: string;
-  mode: string;
   status: string;
   overallScore: number | null;
   error: string | null;
@@ -35,7 +34,6 @@ function toExecutionSummary(row: {
     id: row.id,
     reportId: row.reportId,
     workflowSlug: row.workflowSlug,
-    mode: row.mode as WorkflowExecutionSummary['mode'],
     status: row.status as WorkflowExecutionSummary['status'],
     overallScore: row.overallScore,
     error: row.error,
@@ -123,7 +121,6 @@ export async function listWorkflowExecutions(
       },
       ...(filters.status ? { status: filters.status } : {}),
       ...(filters.workflowSlug ? { workflowSlug: filters.workflowSlug } : {}),
-      ...(filters.mode ? { mode: filters.mode } : {}),
       ...(filters.reportId ? { reportId: filters.reportId } : {}),
       ...(andConditions.length > 0 ? { AND: andConditions } : {}),
     },
@@ -133,7 +130,6 @@ export async function listWorkflowExecutions(
       id: true,
       reportId: true,
       workflowSlug: true,
-      mode: true,
       status: true,
       overallScore: true,
       error: true,
@@ -167,7 +163,6 @@ export async function listReportExecutions(
       id: true,
       reportId: true,
       workflowSlug: true,
-      mode: true,
       status: true,
       overallScore: true,
       error: true,
@@ -195,7 +190,6 @@ export async function getWorkflowExecution(
       id: true,
       reportId: true,
       workflowSlug: true,
-      mode: true,
       status: true,
       overallScore: true,
       error: true,

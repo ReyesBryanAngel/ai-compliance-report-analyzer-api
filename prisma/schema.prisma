@@ -16,9 +16,6 @@ model Organization {
   users                  User[]
   reports                Report[]
   documents              Document[]
-  checkpointOverrides    OrgCheckpointOverride[]
-  thresholdConfigs       OrgThresholdConfig[]
-  workflowConfigs        OrgWorkflowConfig[]
   agentSkillInstructions AgentSkillInstruction[]
 
   @@map("organizations")
@@ -159,7 +156,6 @@ model Workflow {
   description            String?                 @db.Text
   enabled                Boolean                 @default(true)
   checkpoints            Checkpoint[]
-  orgConfigs             OrgWorkflowConfig[]
   agentSkillInstructions AgentSkillInstruction[]
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
@@ -168,65 +164,17 @@ model Workflow {
 }
 
 model Checkpoint {
-  id                  String                  @id @default(uuid())
-  workflowId          String
-  workflow            Workflow                @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  slug                String
-  name                String
-  description         String?                 @db.Text
-  enabled             Boolean                 @default(true)
-  orgOverrides        OrgCheckpointOverride[]
-  orgThresholdConfigs OrgThresholdConfig[]
-  createdAt           DateTime                @default(now())
-  updatedAt           DateTime                @updatedAt
+  id          String   @id @default(uuid())
+  workflowId  String
+  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  slug        String
+  name        String
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@unique([workflowId, slug])
   @@map("checkpoints")
-}
-
-model OrgCheckpointOverride {
-  id             String       @id @default(uuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  checkpointId   String
-  checkpoint     Checkpoint   @relation(fields: [checkpointId], references: [id], onDelete: Cascade)
-  enabled        Boolean      @default(true)
-
-  @@unique([organizationId, checkpointId])
-  @@map("org_checkpoint_overrides")
-}
-
-model OrgThresholdConfig {
-  id             String       @id @default(uuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  checkpointId   String
-  checkpoint     Checkpoint   @relation(fields: [checkpointId], references: [id], onDelete: Cascade)
-  greenMax       Int
-  amberMax       Int
-  params         Json?
-  updatedAt      DateTime     @updatedAt
-
-  @@unique([organizationId, checkpointId])
-  @@map("org_threshold_configs")
-}
-
-enum WorkflowMode {
-  CHECKPOINTS
-  AGENT_SKILL
-}
-
-model OrgWorkflowConfig {
-  id             String       @id @default(uuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  workflowId     String
-  workflow       Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  mode           WorkflowMode @default(CHECKPOINTS)
-  updatedAt      DateTime     @updatedAt
-
-  @@unique([organizationId, workflowId])
-  @@map("org_workflow_configs")
 }
 
 model AgentSkillInstruction {
@@ -265,7 +213,6 @@ model WorkflowExecution {
   reportId     String
   report       Report            @relation(fields: [reportId], references: [id], onDelete: Cascade)
   workflowSlug String
-  mode         WorkflowMode
   status       ExecutionStatus   @default(RUNNING)
   overallScore Int?
   error        String?           @db.Text

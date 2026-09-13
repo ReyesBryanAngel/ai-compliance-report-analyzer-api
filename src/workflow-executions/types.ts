@@ -2,7 +2,6 @@ export interface WorkflowExecutionSummary {
   id: string;
   reportId: string;
   workflowSlug: string;
-  mode: 'CHECKPOINTS' | 'AGENT_SKILL';
   status: 'RUNNING' | 'COMPLETED' | 'FAILED';
   overallScore: number | null;
   error: string | null;
@@ -43,7 +42,6 @@ export interface ConversationDetail {
 export interface ExecutionFilters {
   status?: 'RUNNING' | 'COMPLETED' | 'FAILED';
   workflowSlug?: string;
-  mode?: 'CHECKPOINTS' | 'AGENT_SKILL';
   reportId?: string;
   from?: string;
   to?: string;

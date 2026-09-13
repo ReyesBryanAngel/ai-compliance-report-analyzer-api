@@ -1,9 +1,8 @@
 import type { PrismaClient } from '../generated/prisma/client';
-import { runRiskEngine, SUPPORTED_WORKFLOWS, normalizeTransactions } from '../risk-engine';
+import { SUPPORTED_WORKFLOWS, normalizeTransactions } from '../risk-engine';
 import type { NormalizedTransaction } from '../parser/types';
 import type { WorkflowResult } from '../risk-engine/types';
 import { generateNarrative } from '../llm/service';
-import { loadKycThresholds, loadSgThresholds, loadTramlThresholds } from '../thresholds/service';
 import { runAgentSkillWorkflow } from '../agent-skills/runner';
 import type {
   GenerateReportBatchResponse,
@@ -44,66 +43,14 @@ function buildSummary(
   };
 }
 
-async function resolveEnabledCheckpoints(
-  prisma: PrismaClient,
-  workflows: string[],
-  orgId: string | null,
-): Promise<Set<string>> {
-  if (orgId) {
-    const checkpoints = await prisma.checkpoint.findMany({
-      where: { workflow: { slug: { in: workflows } } },
-      include: { orgOverrides: { where: { organizationId: orgId } } },
-    });
-    return new Set(
-      checkpoints
-        .filter((cp) => cp.orgOverrides.length > 0 ? cp.orgOverrides[0].enabled : cp.enabled)
-        .map((cp) => cp.slug),
-    );
-  }
-
-  const checkpoints = await prisma.checkpoint.findMany({
-    where: { workflow: { slug: { in: workflows } }, enabled: true },
-    select: { slug: true },
-  });
-  return new Set(checkpoints.map((cp) => cp.slug));
-}
-
-async function resolveWorkflowModes(
-  prisma: PrismaClient,
-  organizationId: string | null,
-  workflows: string[],
-): Promise<Map<string, 'CHECKPOINTS' | 'AGENT_SKILL'>> {
-  const map = new Map<string, 'CHECKPOINTS' | 'AGENT_SKILL'>();
-  if (!organizationId) {
-    workflows.forEach((w) => map.set(w, 'AGENT_SKILL'));
-    return map;
-  }
-
-  const configs = await prisma.orgWorkflowConfig.findMany({
-    where: {
-      organizationId,
-      workflow: { slug: { in: workflows } },
-    },
-    include: { workflow: true },
-  });
-
-  const configBySlug = new Map(configs.map((c) => [c.workflow.slug, c.mode as 'CHECKPOINTS' | 'AGENT_SKILL']));
-  workflows.forEach((w) => map.set(w, configBySlug.get(w) ?? 'AGENT_SKILL'));
-  return map;
-}
-
-async function generateSingleReport(
-  doc: { id: string; originalName: string; batchId: string | null },
-  transactions: NormalizedTransaction[],
+async function createReportShell(
+  doc: { id: string; originalName: string },
   workflow: string,
   prisma: PrismaClient,
   userId: string,
   organizationId: string | null,
-  enabledCheckpoints: Set<string>,
-  thresholds: Record<string, unknown>,
-  workflowMode: 'CHECKPOINTS' | 'AGENT_SKILL',
   titleOverride?: string,
-): Promise<GenerateReportResponse> {
+): Promise<{ report: { id: string; createdAt: Date }; reportTitle: string }> {
   const dateStr = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -125,25 +72,33 @@ async function generateSingleReport(
     },
   });
 
-  try {
-    let wfResult: WorkflowResult;
+  return { report, reportTitle };
+}
 
-    if (workflowMode === 'AGENT_SKILL') {
-      const numericTxs = normalizeTransactions(transactions);
-      wfResult = await runAgentSkillWorkflow(
-        {
-          workflowSlug: workflow,
-          organizationId,
-          transactions: numericTxs,
-          reportId: report.id,
-          metadata: { documentName: doc.originalName },
-        },
-        prisma,
-      );
-    } else {
-      const riskEngineReport = runRiskEngine(transactions, [workflow], { thresholds, enabledCheckpoints });
-      wfResult = riskEngineReport.workflows[0];
-    }
+// Runs the actual analysis (agent-skill LLM call, narrative generation) for a report that has
+// already been created with status GENERATING. This is the slow part — callers should not block an
+// HTTP response on it; run it in the background and let clients poll for the status flip.
+async function processReport(
+  report: { id: string; createdAt: Date },
+  reportTitle: string,
+  doc: { id: string; originalName: string; batchId: string | null },
+  transactions: NormalizedTransaction[],
+  workflow: string,
+  prisma: PrismaClient,
+  organizationId: string | null,
+): Promise<GenerateReportResponse> {
+  try {
+    const numericTxs = normalizeTransactions(transactions);
+    const wfResult: WorkflowResult = await runAgentSkillWorkflow(
+      {
+        workflowSlug: workflow,
+        organizationId,
+        transactions: numericTxs,
+        reportId: report.id,
+        metadata: { documentName: doc.originalName },
+      },
+      prisma,
+    );
 
     const riskReport = { workflows: [wfResult] };
     const savedChecks: ReportCheckItem[] = [];
@@ -300,18 +255,6 @@ export async function generateReport(
     );
   }
 
-  // Resolve workflow modes — AGENT_SKILL workflows bypass the risk engine
-  const workflowModes = await resolveWorkflowModes(prisma, organizationId, workflows);
-
-  // Only load checkpoint config for CHECKPOINTS-mode workflows (harmless for AGENT_SKILL but skips unnecessary queries)
-  const checkpointWorkflows = workflows.filter((w) => workflowModes.get(w) === 'CHECKPOINTS');
-  const enabledCheckpoints = await resolveEnabledCheckpoints(prisma, checkpointWorkflows, organizationId);
-  const thresholds = {
-    ...(checkpointWorkflows.includes('kyc') ? { kyc: await loadKycThresholds(prisma, organizationId) } : {}),
-    ...(checkpointWorkflows.includes('sg') ? { sg: await loadSgThresholds(prisma, organizationId) } : {}),
-    ...(checkpointWorkflows.includes('traml') ? { traml: await loadTramlThresholds(prisma, organizationId) } : {}),
-  };
-
   const pairs: Array<{ doc: (typeof documents)[number]; workflow: string }> = [];
   for (const doc of documents) {
     for (const workflow of workflows) {
@@ -319,31 +262,47 @@ export async function generateReport(
     }
   }
 
+  // Create the GENERATING report rows synchronously — this is fast (plain inserts) and gives the
+  // client something to poll for immediately, without blocking the response on the actual analysis.
+  const shells = await Promise.all(
+    pairs.map(({ doc, workflow }) => createReportShell(doc, workflow, prisma, userId, organizationId, title)),
+  );
+
   const CONCURRENCY = 3;
-  const results: GenerateReportResponse[] = new Array(pairs.length);
   let idx = 0;
   async function worker() {
     while (idx < pairs.length) {
       const i = idx++;
       const { doc, workflow } = pairs[i];
+      const { report, reportTitle } = shells[i];
       const transactions = doc.parsedData as NormalizedTransaction[];
-      results[i] = await generateSingleReport(
-        doc,
-        transactions,
-        workflow,
-        prisma,
-        userId,
-        organizationId,
-        enabledCheckpoints,
-        thresholds,
-        workflowModes.get(workflow) ?? 'CHECKPOINTS',
-        title,
-      );
+      try {
+        await processReport(
+          report,
+          reportTitle,
+          doc,
+          transactions,
+          workflow,
+          prisma,
+          organizationId,
+        );
+      } catch (err) {
+        // processReport already marks the row FAILED before rethrowing; just prevent an unhandled
+        // rejection here since nothing is awaiting this background worker.
+        console.error(`[Reports] Report ${report.id} (${workflow}) failed:`, err);
+      }
     }
   }
-  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, pairs.length) }, worker));
 
-  return { code: 201, status: 'OK', message: `Successfully created ${results.length} ${results.length === 1 ? 'report' : 'reports'}` };
+  // Fire-and-forget: the agent-skill LLM calls can take well over the request timeout of any proxy
+  // sitting in front of this API, so the HTTP response must not wait on them.
+  void Promise.all(Array.from({ length: Math.min(CONCURRENCY, pairs.length) }, worker));
+
+  return {
+    code: 201,
+    status: 'OK',
+    message: `Generating ${pairs.length} ${pairs.length === 1 ? 'report' : 'reports'}`,
+  };
 }
 
 export async function getReport(

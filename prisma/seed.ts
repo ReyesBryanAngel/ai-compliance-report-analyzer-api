@@ -28,7 +28,7 @@ const SEED_DATA = [
       {
         slug: 'recurring-salary',
         name: 'Recurring Salary',
-        description: 'Detects stable, recurring salary inflows using a 5-signal confidence model.',
+        description: 'Detects stable, recurring salary inflows using a 5-signal confidence model. RISK POLARITY IS INVERTED: the risk to flag is the ABSENCE or weakness of a recurring salary signal, not its presence. A confirmed, high-confidence salary pattern is the LOW-risk (triggered=false, score=0) outcome; no salary detected or a weak/inconsistent pattern is the HIGH-risk (triggered=true, high score) outcome that should be reported.',
       },
       {
         slug: 'income-consistency',
@@ -187,10 +187,14 @@ async function main() {
       });
     }
 
-    // Seed global-default AgentSkillInstruction (organizationId = null, version = 1, isActive = true)
+    // Seed global-default AgentSkillInstruction (organizationId = null, version = 1, isActive = true).
+    // This row is exclusively seed-managed — the SME-instructions API only ever creates org-scoped
+    // versions (organizationId is required there) — so it's safe to keep its content in sync on
+    // every reseed rather than only creating it once.
     const existingInstruction = await prisma.agentSkillInstruction.findFirst({
       where: { workflowId: workflow.id, organizationId: null, version: 1 },
     });
+    const defaultContent = buildDefaultInstruction(wf);
     if (!existingInstruction) {
       await prisma.agentSkillInstruction.create({
         data: {
@@ -198,9 +202,14 @@ async function main() {
           organizationId: null,
           version: 1,
           title: `Default ${wf.name} instruction`,
-          content: buildDefaultInstruction(wf),
+          content: defaultContent,
           isActive: true,
         },
+      });
+    } else if (existingInstruction.content !== defaultContent) {
+      await prisma.agentSkillInstruction.update({
+        where: { id: existingInstruction.id },
+        data: { content: defaultContent },
       });
     }
 

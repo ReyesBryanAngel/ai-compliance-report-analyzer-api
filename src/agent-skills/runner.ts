@@ -63,7 +63,7 @@ export async function runAgentSkillWorkflow(
 
   // Create audit trail records before any LLM calls
   const workflowExecution = await prisma.workflowExecution.create({
-    data: { reportId, workflowSlug, mode: 'AGENT_SKILL', status: 'RUNNING' },
+    data: { reportId, workflowSlug, status: 'RUNNING' },
   });
 
   const agentConversation = await prisma.agentConversation.create({

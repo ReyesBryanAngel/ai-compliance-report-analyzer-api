@@ -6,7 +6,6 @@ interface CheckpointItem {
   slug: string;
   name: string;
   description: string | null;
-  enabled: boolean;
 }
 
 interface WorkflowItem {
@@ -25,7 +24,6 @@ const checkpointSchema = {
     slug:        { type: 'string' },
     name:        { type: 'string' },
     description: { type: 'string', nullable: true },
-    enabled:     { type: 'boolean' },
   },
 };
 
@@ -57,7 +55,6 @@ async function fetchWorkflows(prisma: PrismaClient): Promise<WorkflowItem[]> {
       slug: cp.slug,
       name: cp.name,
       description: cp.description,
-      enabled: cp.enabled,
     })),
   }));
 }
@@ -111,61 +108,10 @@ const workflowRoutes: FastifyPluginAsync = async (server) => {
         slug: cp.slug,
         name: cp.name,
         description: cp.description,
-        enabled: cp.enabled,
       })),
     });
   });
 
-  // PATCH /api/v1/workflows/:workflow/checkpoints/:checkpoint — toggle checkpoint enabled/disabled
-  server.patch<{
-    Params: { workflow: string; checkpoint: string };
-    Body: { enabled: boolean };
-    Reply: CheckpointItem;
-  }>('/:workflow/checkpoints/:checkpoint', {
-    schema: {
-      tags: ['Workflows'],
-      summary: 'Enable or disable a checkpoint within a workflow',
-      params: {
-        type: 'object',
-        properties: {
-          workflow:   { type: 'string' },
-          checkpoint: { type: 'string' },
-        },
-        required: ['workflow', 'checkpoint'],
-      },
-      body: {
-        type: 'object',
-        required: ['enabled'],
-        properties: {
-          enabled: { type: 'boolean', description: 'Set to false to disable this checkpoint' },
-        },
-      },
-      response: { 200: checkpointSchema },
-    },
-  }, async (request, reply) => {
-    const { workflow: workflowSlug, checkpoint: checkpointSlug } = request.params;
-    const { enabled } = request.body;
-
-    const cp = await server.prisma.checkpoint.findFirst({
-      where: { slug: checkpointSlug, workflow: { slug: workflowSlug } },
-    });
-    if (!cp) {
-      return reply.notFound(`Checkpoint '${checkpointSlug}' not found in workflow '${workflowSlug}'`);
-    }
-
-    const updated = await server.prisma.checkpoint.update({
-      where: { id: cp.id },
-      data: { enabled },
-    });
-
-    return reply.send({
-      id: updated.id,
-      slug: updated.slug,
-      name: updated.name,
-      description: updated.description,
-      enabled: updated.enabled,
-    });
-  });
 };
 
 export default workflowRoutes;

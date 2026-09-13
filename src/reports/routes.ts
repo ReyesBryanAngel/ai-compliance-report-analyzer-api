@@ -144,7 +144,7 @@ const reportRoutes: FastifyPluginAsync = async (server) => {
     try {
       const { sub: userId, organizationId } = request.user;
       const orgId = organizationId || null;
-      const result = await generateReport(request.body, server.prisma, userId, orgId);
+      const result = await generateReport(request.body, server.prisma, userId, orgId, server.reportQueue);
       return reply.send(result);
     } catch (err) {
       if (err instanceof Error) {

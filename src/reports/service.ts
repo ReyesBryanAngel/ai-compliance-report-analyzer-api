@@ -4,6 +4,7 @@ import type { NormalizedTransaction } from '../parser/types';
 import type { WorkflowResult } from '../risk-engine/types';
 import { generateNarrative } from '../llm/service';
 import { runAgentSkillWorkflow } from '../agent-skills/runner';
+import type { ReportQueueWorker } from './report-queue';
 import type {
   GenerateReportBatchResponse,
   GenerateReportBody,
@@ -77,8 +78,8 @@ async function createReportShell(
 
 // Runs the actual analysis (agent-skill LLM call, narrative generation) for a report that has
 // already been created with status GENERATING. This is the slow part — callers should not block an
-// HTTP response on it; run it in the background and let clients poll for the status flip.
-async function processReport(
+// HTTP response on it; the report queue worker (report-queue.ts) invokes this per job.
+export async function processReport(
   report: { id: string; createdAt: Date },
   reportTitle: string,
   doc: { id: string; originalName: string; batchId: string | null },
@@ -175,6 +176,7 @@ export async function generateReport(
   prisma: PrismaClient,
   userId: string,
   organizationId: string | null,
+  reportQueue: ReportQueueWorker,
 ): Promise<GenerateReportBatchResponse> {
   const { workflows, document_ids, batch_id, title } = body;
 
@@ -268,35 +270,13 @@ export async function generateReport(
     pairs.map(({ doc, workflow }) => createReportShell(doc, workflow, prisma, userId, organizationId, title)),
   );
 
-  const CONCURRENCY = 3;
-  let idx = 0;
-  async function worker() {
-    while (idx < pairs.length) {
-      const i = idx++;
-      const { doc, workflow } = pairs[i];
-      const { report, reportTitle } = shells[i];
-      const transactions = doc.parsedData as NormalizedTransaction[];
-      try {
-        await processReport(
-          report,
-          reportTitle,
-          doc,
-          transactions,
-          workflow,
-          prisma,
-          organizationId,
-        );
-      } catch (err) {
-        // processReport already marks the row FAILED before rethrowing; just prevent an unhandled
-        // rejection here since nothing is awaiting this background worker.
-        console.error(`[Reports] Report ${report.id} (${workflow}) failed:`, err);
-      }
-    }
-  }
-
-  // Fire-and-forget: the agent-skill LLM calls can take well over the request timeout of any proxy
-  // sitting in front of this API, so the HTTP response must not wait on them.
-  void Promise.all(Array.from({ length: Math.min(CONCURRENCY, pairs.length) }, worker));
+  // Enqueue durable ReportJob rows instead of processing in-process: the report queue worker
+  // (report-queue.ts) picks these up via a DB-backed poll loop, so generation survives a server
+  // restart/crash and stays bounded across concurrent requests and replicas — mirroring the
+  // ParseJob pattern used for document parsing.
+  await Promise.all(
+    pairs.map(({ doc, workflow }, i) => reportQueue.enqueue(shells[i].report.id, doc.id, workflow, prisma)),
+  );
 
   return {
     code: 201,

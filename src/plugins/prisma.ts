@@ -14,6 +14,9 @@ const prismaPlugin: FastifyPluginAsync = fp(async (server) => {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    // pg defaults to max: 10, which is too small once report/parse queue workers and concurrent
+    // HTTP traffic share the same pool. Sized explicitly and overridable per-deployment/replica.
+    max: Number(process.env.DATABASE_POOL_MAX) || 20,
   });
   const adapter = new PrismaPg(pool);
   const prisma = new PrismaClient({ adapter });

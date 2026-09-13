@@ -63,6 +63,7 @@ model Report {
   checks              ComplianceCheck[]
   workflowExecutions  WorkflowExecution[]
   reportConversations ReportConversation[]
+  reportJob           ReportJob?
   documentIds         String[]             @default([])
   workflows           String[]             @default([])
   createdAt           DateTime             @default(now())
@@ -115,6 +116,7 @@ model Document {
   organizationId String?
   organization   Organization?  @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   parseJob       ParseJob?
+  reportJobs     ReportJob[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
@@ -143,6 +145,33 @@ model ParseJob {
 }
 
 enum ParseJobStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model ReportJob {
+  id          String          @id @default(uuid())
+  reportId    String          @unique
+  report      Report          @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  documentId  String
+  document    Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  workflow    String
+  status      ReportJobStatus @default(QUEUED)
+  attempts    Int             @default(0)
+  maxAttempts Int             @default(3)
+  error       String?         @db.Text
+  queuedAt    DateTime        @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  @@index([status, queuedAt])
+  @@index([documentId])
+  @@map("report_jobs")
+}
+
+enum ReportJobStatus {
   QUEUED
   PROCESSING
   COMPLETED

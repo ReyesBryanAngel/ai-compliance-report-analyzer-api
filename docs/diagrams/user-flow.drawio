@@ -1,0 +1,206 @@
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.0.0">
+  <diagram id="user-flow" name="User Flow">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="3200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Legend -->
+        <mxCell id="leg0" value="Legend" style="text;html=1;fontStyle=1;fontSize=14;align=left;" vertex="1" parent="1">
+          <mxGeometry x="800" y="20" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1" value="Client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="800" y="45" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg2" value="API (Fastify)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="800" y="80" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg3" value="Background Worker" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="800" y="115" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg4" value="External Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="800" y="150" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg5" value="Optional / Shared" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="800" y="185" width="160" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Start -->
+        <mxCell id="n1" value="Start" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="400" y="20" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Auth -->
+        <mxCell id="n2" value="POST /api/v1/auth/register&#10;Client submits email &amp; password" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="340" y="110" width="320" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="Hash password (scrypt), create User row" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="340" y="220" width="320" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="POST /api/v1/auth/login&#10;Client submits credentials" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="340" y="330" width="320" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="Verify credentials&#10;Issue JWT access token + rotating refresh token" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="340" y="440" width="320" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="(Optional) Create / Join Organization&#10;scopes user for multi-tenant &amp; SME-instruction isolation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="340" y="560" width="320" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Upload -->
+        <mxCell id="n7" value="Upload Document&#10;multipart POST /documents/upload&#10;OR presigned upload-url + confirm" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="340" y="680" width="320" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="Validate MIME type, stream file to S3,&#10;create Document row (status: PROCESSING)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="340" y="800" width="320" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n8b" value="Amazon S3&#10;(document storage)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="760" y="800" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" value="Enqueue ParseJob (status: QUEUED)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="340" y="920" width="320" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Parse queue -->
+        <mxCell id="n10" value="Parse Queue Worker polls every 5s,&#10;claims batch via SELECT ... FOR UPDATE SKIP LOCKED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="340" y="1030" width="320" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n11" value="Parse document:&#10;CSV -&gt; local parser | PDF / Image -&gt; LlamaParse" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="340" y="1150" width="320" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n11b" value="LlamaParse API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="760" y="1150" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n12" value="Write parsedData, set Document.status = COMPLETED&#10;(retry up to maxAttempts, else FAILED)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="340" y="1270" width="320" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n13" value="Client polls&#10;GET /documents/:id/parse-status" style="rhombus;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="380" y="1390" width="240" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- Generate report -->
+        <mxCell id="n14" value="Generate Report&#10;POST /reports/generate&#10;{ document_ids/batch_id, workflows[] }" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="340" y="1540" width="320" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n15" value="Validate workflows against SUPPORTED_WORKFLOWS,&#10;verify documents COMPLETED;&#10;create Report rows (status: GENERATING)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="340" y="1670" width="320" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n16" value="Agent-skill runner processes each (document, workflow) pair&#10;in the background (worker pool, concurrency 3)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="340" y="1800" width="320" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n17" value="Resolve SME instruction (org -&gt; global -&gt; DEFAULT_INSTRUCTIONS),&#10;build prompt, call Anthropic (agent-skill model)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="340" y="1920" width="320" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n17b" value="Anthropic API&#10;(agent-skill model)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="760" y="1920" width="200" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n18" value="Validate JSON against Zod / schema contract;&#10;retry up to 3x with exponential backoff on failure" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="340" y="2050" width="320" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n19" value="Log every attempt to the audit trail:&#10;WorkflowExecution -&gt; AgentConversation -&gt; AgentExecution -&gt; AgentMessage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="340" y="2180" width="320" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n20" value="Compute overallScore, persist ComplianceCheck rows&#10;+ Report.content; set Report.status = COMPLETED / FAILED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="340" y="2310" width="320" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n21" value="Client polls report status&#10;GET /reports/:id" style="rhombus;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="380" y="2440" width="240" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- Report conversation -->
+        <mxCell id="n22" value="Start Report Conversation&#10;POST /reports/:id/conversations (report must be COMPLETED)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="340" y="2600" width="320" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n23" value="Send Message&#10;POST /conversations/:conversationId/messages" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="340" y="2720" width="320" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n24" value="Build system prompt: report summary, top findings + evidence,&#10;narrative, ComplianceChecks, audit trail summary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="340" y="2840" width="320" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n25" value="Call Anthropic (report-chat model);&#10;persist user + assistant messages in one transaction" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="340" y="2970" width="320" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n25b" value="Anthropic API&#10;(report-chat model)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="760" y="2970" width="200" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n26" value="Return assistant response to client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="340" y="3100" width="320" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="n27" value="End (conversation continues on demand)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="400" y="3210" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Edges: Auth -->
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n1" target="n2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n2" target="n3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n3" target="n4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n4" target="n5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" value="optional" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;" edge="1" parent="1" source="n5" target="n6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n6" target="n7"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Edges: Upload / parse -->
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n7" target="n8"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e8" value="stores to" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;" edge="1" parent="1" source="n8" target="n8b"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n8" target="n9"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n9" target="n10"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n10" target="n11"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e12" value="calls (PDF/Image only)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;" edge="1" parent="1" source="n11" target="n11b"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n11" target="n12"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n12" target="n13"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e15" value="not yet COMPLETED (poll again)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="n13" target="n10">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="200" y="1445" />
+              <mxPoint x="200" y="1070" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e16" value="COMPLETED" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n13" target="n14"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Edges: Generate report -->
+        <mxCell id="e17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n14" target="n15"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n15" target="n16"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n16" target="n17"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e20" value="calls" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;" edge="1" parent="1" source="n17" target="n17b"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n17" target="n18"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e22" value="invalid / API error (retry &#8804;3)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="n18" target="n17">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="200" y="2095" />
+              <mxPoint x="200" y="1965" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e23" value="valid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n18" target="n19"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n19" target="n20"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e25" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n20" target="n21"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e26" value="GENERATING (poll again)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;entryX=1;entryY=0.3;" edge="1" parent="1" source="n21" target="n21">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="2495" />
+              <mxPoint x="720" y="2462" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e27" value="COMPLETED" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n21" target="n22"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Edges: Report conversation -->
+        <mxCell id="e28" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n22" target="n23"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e29" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n23" target="n24"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n24" target="n25"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e31" value="calls" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;" edge="1" parent="1" source="n25" target="n25b"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n25" target="n26"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e33" value="continue chatting" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="n26" target="n23">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="220" y="3135" />
+              <mxPoint x="220" y="2760" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n26" target="n27"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

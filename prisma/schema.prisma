@@ -184,26 +184,11 @@ model Workflow {
   name                   String
   description            String?                 @db.Text
   enabled                Boolean                 @default(true)
-  checkpoints            Checkpoint[]
   agentSkillInstructions AgentSkillInstruction[]
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
 
   @@map("workflows")
-}
-
-model Checkpoint {
-  id          String   @id @default(uuid())
-  workflowId  String
-  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  slug        String
-  name        String
-  description String?  @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([workflowId, slug])
-  @@map("checkpoints")
 }
 
 model AgentSkillInstruction {

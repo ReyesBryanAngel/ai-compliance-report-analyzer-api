@@ -19,6 +19,10 @@ async function hashPassword(password: string): Promise<string> {
   return `${salt}:${hash.toString('hex')}`;
 }
 
+// `checkpoints` here is authoring data only — it seeds the Workflow name/description and is
+// woven into the default AgentSkillInstruction prose (buildDefaultInstruction below) as a list of
+// topics for the LLM to consider. There is no Checkpoint DB table; nothing here is persisted
+// per-checkpoint.
 const SEED_DATA = [
   {
     slug: 'kyc',
@@ -165,7 +169,7 @@ If you identify a risk pattern not covered above, create a finding with a new ch
 }
 
 async function main() {
-  console.log('Seeding workflows and checkpoints...');
+  console.log('Seeding workflows...');
 
   for (const wf of SEED_DATA) {
     const workflow = await prisma.workflow.upsert({
@@ -173,19 +177,6 @@ async function main() {
       update: { name: wf.name, description: wf.description },
       create: { slug: wf.slug, name: wf.name, description: wf.description },
     });
-
-    for (const cp of wf.checkpoints) {
-      await prisma.checkpoint.upsert({
-        where: { workflowId_slug: { workflowId: workflow.id, slug: cp.slug } },
-        update: { name: cp.name, description: cp.description },
-        create: {
-          workflowId: workflow.id,
-          slug: cp.slug,
-          name: cp.name,
-          description: cp.description,
-        },
-      });
-    }
 
     // Seed global-default AgentSkillInstruction (organizationId = null, version = 1, isActive = true).
     // This row is exclusively seed-managed — the SME-instructions API only ever creates org-scoped
@@ -213,7 +204,7 @@ async function main() {
       });
     }
 
-    console.log(`  ✓ ${wf.name} (${wf.checkpoints.length} checkpoints)`);
+    console.log(`  ✓ ${wf.name} (${wf.checkpoints.length} topics in default instruction)`);
   }
 
   console.log('Seeding default organization and admin user...');

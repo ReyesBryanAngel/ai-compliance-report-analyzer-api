@@ -45,16 +45,9 @@ export async function runAgentSkillWorkflow(
     DEFAULT_INSTRUCTIONS[workflowSlug] ??
     `Analyze the transactions for the "${workflowSlug}" workflow and produce compliance risk findings.`;
 
-  const checkpointCatalog = await prisma.checkpoint.findMany({
-    where: { workflow: { slug: workflowSlug } },
-    select: { slug: true, name: true, description: true },
-    orderBy: { slug: 'asc' },
-  });
-
   const { system, user } = buildAgentSkillPrompt({
     workflowSlug,
     instructions: instructionContent,
-    checkpointCatalog,
     transactions,
     metadata,
   });

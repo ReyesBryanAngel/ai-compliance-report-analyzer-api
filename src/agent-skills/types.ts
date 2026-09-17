@@ -10,9 +10,3 @@ export interface AgentSkillContext {
     dateRange?: { from: string; to: string };
   };
 }
-
-export interface CheckpointCatalogEntry {
-  slug: string;
-  name: string;
-  description: string | null;
-}

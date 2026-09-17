@@ -1,11 +1,9 @@
 import type { NumericTransaction } from '../risk-engine/types';
-import type { CheckpointCatalogEntry } from './types';
 import { AGENT_SKILL_OUTPUT_SCHEMA } from './schema';
 
 export interface PromptContext {
   workflowSlug: string;
   instructions: string;
-  checkpointCatalog: CheckpointCatalogEntry[];
   transactions: NumericTransaction[];
   metadata?: {
     documentName?: string;
@@ -14,10 +12,6 @@ export interface PromptContext {
 }
 
 export function buildAgentSkillPrompt(ctx: PromptContext): { system: string; user: string } {
-  const catalogLines = ctx.checkpointCatalog
-    .map((cp) => `- ${cp.slug} — ${cp.name}${cp.description ? ': ' + cp.description : ''}`)
-    .join('\n');
-
   const schemaJson = JSON.stringify(AGENT_SKILL_OUTPUT_SCHEMA, null, 2);
 
   const system = `You are an expert compliance analyst performing a "${ctx.workflowSlug}" workflow analysis.
@@ -35,13 +29,7 @@ Rules:
 - The "reason" field must open with your conclusion ("No discrepancies detected." / "X discrepancies found."), then briefly explain your verification. Do NOT use "reason" as a scratchpad — state the conclusion first.
 - triggered=true and score>0 are only valid when your final conclusion confirms the risk pattern is present with concrete evidence.
 - evidenceIndices must reference valid 0-based positions in the transaction array provided. Use an empty array [] if there is no specific evidence.
-
-## Checkpoint Catalog
-Prefer the following checkpoint slugs when your finding corresponds to one of these topics. This ensures findings integrate with existing threshold configuration:
-
-${catalogLines}
-
-You may introduce new checkpoint slugs prefixed "ai-" (e.g. "ai-unusual-merchant-category") for risk patterns the above catalog does not cover, but only when the SME instructions specifically call for it.`;
+- Each finding's "checkpoint" slug should be a short, descriptive, kebab-case identifier for the risk pattern it covers (e.g. "gambling-debits", "rapid-inflow-outflow"). Use the slugs named in the SME instructions below when a finding matches one of those topics; for any other risk pattern you identify, invent a new descriptive slug prefixed "ai-" (e.g. "ai-unusual-merchant-category").`;
 
   const txArray = ctx.transactions.map((tx, i) => ({ idx: i, ...tx }));
 

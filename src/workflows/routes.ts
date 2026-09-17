@@ -1,31 +1,13 @@
 import { FastifyPluginAsync } from 'fastify';
 import type { PrismaClient } from '../generated/prisma/client';
 
-interface CheckpointItem {
-  id: string;
-  slug: string;
-  name: string;
-  description: string | null;
-}
-
 interface WorkflowItem {
   id: string;
   slug: string;
   name: string;
   description: string | null;
   enabled: boolean;
-  checkpoints: CheckpointItem[];
 }
-
-const checkpointSchema = {
-  type: 'object',
-  properties: {
-    id:          { type: 'string' },
-    slug:        { type: 'string' },
-    name:        { type: 'string' },
-    description: { type: 'string', nullable: true },
-  },
-};
 
 const workflowSchema = {
   type: 'object',
@@ -35,13 +17,11 @@ const workflowSchema = {
     name:        { type: 'string' },
     description: { type: 'string', nullable: true },
     enabled:     { type: 'boolean' },
-    checkpoints: { type: 'array', items: checkpointSchema },
   },
 };
 
 async function fetchWorkflows(prisma: PrismaClient): Promise<WorkflowItem[]> {
   const rows = await prisma.workflow.findMany({
-    include: { checkpoints: { orderBy: { slug: 'asc' } } },
     orderBy: { slug: 'asc' },
   });
   return rows.map((wf) => ({
@@ -50,21 +30,15 @@ async function fetchWorkflows(prisma: PrismaClient): Promise<WorkflowItem[]> {
     name: wf.name,
     description: wf.description,
     enabled: wf.enabled,
-    checkpoints: wf.checkpoints.map((cp) => ({
-      id: cp.id,
-      slug: cp.slug,
-      name: cp.name,
-      description: cp.description,
-    })),
   }));
 }
 
 const workflowRoutes: FastifyPluginAsync = async (server) => {
-  // GET /api/v1/workflows — list all workflows with their checkpoints
+  // GET /api/v1/workflows — list all workflows
   server.get<{ Reply: { workflows: WorkflowItem[] } }>('/', {
     schema: {
       tags: ['Workflows'],
-      summary: 'List all workflows and their checkpoints',
+      summary: 'List all workflows',
       response: {
         200: {
           type: 'object',
@@ -79,11 +53,11 @@ const workflowRoutes: FastifyPluginAsync = async (server) => {
     return reply.send({ workflows });
   });
 
-  // GET /api/v1/workflows/:workflow — single workflow with checkpoints
+  // GET /api/v1/workflows/:workflow — single workflow
   server.get<{ Params: { workflow: string }; Reply: WorkflowItem }>('/:workflow', {
     schema: {
       tags: ['Workflows'],
-      summary: 'Get a workflow and its checkpoints by slug',
+      summary: 'Get a workflow by slug',
       params: {
         type: 'object',
         properties: { workflow: { type: 'string' } },
@@ -94,7 +68,6 @@ const workflowRoutes: FastifyPluginAsync = async (server) => {
   }, async (request, reply) => {
     const wf = await server.prisma.workflow.findUnique({
       where: { slug: request.params.workflow },
-      include: { checkpoints: { orderBy: { slug: 'asc' } } },
     });
     if (!wf) return reply.notFound(`Workflow '${request.params.workflow}' not found`);
     return reply.send({
@@ -103,12 +76,6 @@ const workflowRoutes: FastifyPluginAsync = async (server) => {
       name: wf.name,
       description: wf.description,
       enabled: wf.enabled,
-      checkpoints: wf.checkpoints.map((cp) => ({
-        id: cp.id,
-        slug: cp.slug,
-        name: cp.name,
-        description: cp.description,
-      })),
     });
   });
 

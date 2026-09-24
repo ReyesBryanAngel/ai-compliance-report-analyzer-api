@@ -3,10 +3,7 @@ dist/
 .env
 *.js.map
 /src/generated/prisma
-.env.example
 uploads/
 samples/
-.env
 test-data
-CLAUDE.md
-ARCHITECTURE.md
+.claude/settings.local.json

@@ -1,5 +1,9 @@
 # Plan: Remove Checkpoint Mode from Report Generation
 
+> **Archived.** This plan is complete and kept only for history. It describes the code as it was in mid-September 2026, and its file and line references are no longer current. For the current design, see [ARCHITECTURE.md](../../ARCHITECTURE.md) and [CLAUDE.md](../../CLAUDE.md).
+>
+> **Changed since:** section 2 below says the `Checkpoint` model had to survive as a prompt catalog. It was later removed as well (commit `77fb6f1`, "remove Checkpoint catalog and its use in agent-skill prompts"). The SME instruction text is now the only source of checkpoint slugs, and `prisma/seed.ts` keeps checkpoint lists only as authoring data for the default instructions.
+
 ## Status: ✅ Completed
 
 All phases below were executed and merged. Report generation now runs exclusively through `AGENT_SKILL` — there is no `CHECKPOINTS` code path, config surface, or DB schema left anywhere in the codebase. Verified against this repo's state as of 2026-09-17:
@@ -8,8 +12,8 @@ All phases below were executed and merged. Report generation now runs exclusivel
 - **Schema/DB migration**: `prisma/migrations/20260913023305_remove_checkpoint_mode` exists and is recorded as applied in `_prisma_migrations` on the local dev database (`finished_at: 2026-09-13T05:02:17Z`). Confirmed directly against the live DB (not just the schema file): `org_workflow_configs`, `org_checkpoint_overrides`, and `org_threshold_configs` tables no longer exist; `checkpoints.enabled` and `workflow_executions.mode` columns are gone; the `WorkflowMode` enum type no longer exists.
 - **Pre-flight audit result** (§4): at the time of removal, `OrgWorkflowConfig`/override/threshold tables were empty and all 13 existing `WorkflowExecution` rows already had `mode = 'AGENT_SKILL'` — so the drop needed no data-migration/backfill step, only the schema change itself.
 - **Decisions (§6) resolved**: Decision 2 went with **Drop** — `WorkflowExecution.mode` and the `mode` filter were removed from `src/workflow-executions/{types,service,routes}.ts`, not just left in place.
-- **`ARCHITECTURE.md`**: rewritten to remove all CHECKPOINTS-mode/dual-strategy language; present and current on disk (this file is gitignored, so it has no commit of its own — verify it's carried over on any fresh clone/CI checkout, since git won't do that for you).
-- **`CLAUDE.md`**: ⚠️ **outstanding** — the doc rewrite for this removal (Agent-Skill Workflow section, Reports Module, Database Schema table, env var table) was made but only exists in a local `git stash` (`stash@{0}`, based on commit `149ad5f`) on the machine where it was written. The version currently committed to `main`/this branch's `CLAUDE.md` still describes the old pre-agent-skill, pre-multi-tenant architecture (single `kyc` workflow, local disk uploads, no auth/S3/orgs) — it predates even the original agent-skill work and was never updated in this branch's history. This is a pre-existing documentation gap unrelated to the checkpoint-mode changes themselves, but worth fixing in a follow-up: either pop that stash and reconcile it with the current `CLAUDE.md`, or write `CLAUDE.md` fresh against the current codebase.
+- **`ARCHITECTURE.md`**: rewritten to remove all CHECKPOINTS-mode/dual-strategy language. It was gitignored at the time; it has since been un-ignored and committed.
+- **`CLAUDE.md`**: rewritten against the current codebase and committed. The earlier concern about an outdated committed copy and an unapplied local `git stash` is resolved.
 - **Separately** (not part of this plan, but same removal commit): the local PDF/image parsing fallback chain (`pdfjs-dist`, `tesseract.js`, `node-canvas`) was also removed in the same effort, leaving LlamaParse as the sole PDF/image parser; `csv-parse` was kept for local CSV parsing.
 
 The rest of this document is kept as-is below for historical reference — it was the plan followed to get here.
@@ -19,7 +23,7 @@ The rest of this document is kept as-is below for historical reference — it wa
 Report generation currently supports two execution modes per `(organization, workflow)`, chosen via `OrgWorkflowConfig.mode`:
 
 - **`CHECKPOINTS`** — the deterministic risk engine (`src/risk-engine/`) runs hand-coded checkpoint functions against transactions.
-- **`AGENT_SKILL`** — an LLM (Anthropic) performs the analysis, per `src/agent-skills/`. **This is already the default** for every org and for users with no organization (`resolveWorkflowModes()` in [src/reports/service.ts](src/reports/service.ts) falls back to `AGENT_SKILL` whenever no config row exists).
+- **`AGENT_SKILL`** — an LLM (Anthropic) performs the analysis, per `src/agent-skills/`. **This is already the default** for every org and for users with no organization (`resolveWorkflowModes()` in [src/reports/service.ts](../../src/reports/service.ts) falls back to `AGENT_SKILL` whenever no config row exists).
 
 The goal is to delete the `CHECKPOINTS` code path entirely and make `AGENT_SKILL` the only mode, without breaking anything `AGENT_SKILL` depends on.
 
@@ -30,9 +34,9 @@ Several things live under `risk-engine/` or look "checkpoint-related" but are ac
 | Thing | Why it must survive |
 |---|---|
 | `src/risk-engine/types.ts` (`RiskFinding`, `WorkflowResult`, `NumericTransaction`, `RiskReport`) | `AGENT_SKILL`'s `runAgentSkillWorkflow()` returns a `WorkflowResult` built from these exact types. Reports, workflow-executions, and report-conversations all consume `WorkflowResult`/`RiskFinding`. |
-| `src/risk-engine/scoring.ts` (`computeOverallScore`) | Called directly by [src/agent-skills/runner.ts:234](src/agent-skills/runner.ts#L234) to score LLM findings. |
-| `normalizeTransactions()` (currently in `src/risk-engine/index.ts`) | Called by [src/reports/service.ts:132](src/reports/service.ts#L132) before every `AGENT_SKILL` run to convert string amounts to numbers. Not checkpoint-specific — just a data-shape adapter. |
-| `Workflow` and `Checkpoint` Prisma models (slug/name/description) | Used as a **catalog**, not an execution engine: `runAgentSkillWorkflow()` queries `prisma.checkpoint.findMany(...)` to build the "Checkpoint Catalog" section of the LLM prompt ([src/agent-skills/prompt-builder.ts:39](src/agent-skills/prompt-builder.ts#L39)), and `prisma/seed.ts` uses the same list to generate default SME instructions. Deleting these tables breaks agent-skill prompts and the seed script. |
+| `src/risk-engine/scoring.ts` (`computeOverallScore`) | Called directly by [src/agent-skills/runner.ts:234](../../src/agent-skills/runner.ts#L234) to score LLM findings. |
+| `normalizeTransactions()` (currently in `src/risk-engine/index.ts`) | Called by [src/reports/service.ts:132](../../src/reports/service.ts#L132) before every `AGENT_SKILL` run to convert string amounts to numbers. Not checkpoint-specific — just a data-shape adapter. |
+| `Workflow` and `Checkpoint` Prisma models (slug/name/description) | Used as a **catalog**, not an execution engine: `runAgentSkillWorkflow()` queries `prisma.checkpoint.findMany(...)` to build the "Checkpoint Catalog" section of the LLM prompt ([src/agent-skills/prompt-builder.ts:39](../../src/agent-skills/prompt-builder.ts#L39)), and `prisma/seed.ts` uses the same list to generate default SME instructions. Deleting these tables breaks agent-skill prompts and the seed script. |
 | `SUPPORTED_WORKFLOWS` constant (currently exported from `risk-engine/workflows/index.ts`) | Used to validate the `workflows` array in every report-generation request, and by `workflow-config`/`thresholds` routes. Needs a new home once the `workflows/` risk-engine folder is deleted. |
 
 Everything else under `src/risk-engine/checkpoints/`, `src/risk-engine/workflows/{kyc,sg,traml,document-integrity}.ts`, and `src/risk-engine/data/` is **execution logic exclusive to `CHECKPOINTS` mode** and is safe to delete.
@@ -50,12 +54,12 @@ Everything else under `src/risk-engine/checkpoints/`, `src/risk-engine/workflows
 
 ### 3.2 Modify (strip CHECKPOINTS branch, keep the rest)
 
-- **[src/reports/service.ts](src/reports/service.ts)**: delete `resolveEnabledCheckpoints()`, `resolveWorkflowModes()`, the `enabledCheckpoints`/`thresholds` computation in `generateReport()`, and the `if/else` in `generateSingleReport()` — always call `runAgentSkillWorkflow()`. Drop the now-unused `workflowMode` parameter.
-- **[src/risk-engine/index.ts](src/risk-engine/index.ts)**: keep only `normalizeTransactions()` and the re-exported types (`RiskFinding`, `RiskReport`, `WorkflowResult`, `NumericTransaction`); delete `runRiskEngine()`, `normalizeAmounts()`, and the `RiskEngineThresholds`/`RiskEngineOptions` types. Consider relocating this trimmed file to `src/risk-engine/normalize.ts` (or similar) since "engine" no longer applies, then update its two importers (`src/reports/service.ts`, and wherever `SUPPORTED_WORKFLOWS` moves to).
+- **[src/reports/service.ts](../../src/reports/service.ts)**: delete `resolveEnabledCheckpoints()`, `resolveWorkflowModes()`, the `enabledCheckpoints`/`thresholds` computation in `generateReport()`, and the `if/else` in `generateSingleReport()` — always call `runAgentSkillWorkflow()`. Drop the now-unused `workflowMode` parameter.
+- **[src/risk-engine/index.ts](../../src/risk-engine/index.ts)**: keep only `normalizeTransactions()` and the re-exported types (`RiskFinding`, `RiskReport`, `WorkflowResult`, `NumericTransaction`); delete `runRiskEngine()`, `normalizeAmounts()`, and the `RiskEngineThresholds`/`RiskEngineOptions` types. Consider relocating this trimmed file to `src/risk-engine/normalize.ts` (or similar) since "engine" no longer applies, then update its two importers (`src/reports/service.ts`, and wherever `SUPPORTED_WORKFLOWS` moves to).
 - **`SUPPORTED_WORKFLOWS`**: move this constant (currently in `src/risk-engine/workflows/index.ts`) to a small standalone module (e.g. `src/workflows/constants.ts`) so `src/reports/service.ts`, `src/thresholds` (being deleted), and `src/workflow-config` (being deleted) don't need it — only `reports/service.ts` and `workflows/routes.ts` will still import it.
-- **[src/workflows/routes.ts](src/workflows/routes.ts)**: remove the `PATCH .../checkpoints/:checkpoint` route and the `enabled` field from `CheckpointItem`/`WorkflowItem` responses (once `Checkpoint.enabled` is dropped from the schema, see §3.3). Keep the `GET /` and `GET /:workflow` catalog-listing endpoints — they still serve as the workflow/checkpoint reference list.
-- **[src/workflow-executions/](src/workflow-executions/)** (`types.ts`, `routes.ts`, `service.ts`): remove the `mode`/`WorkflowMode` field and the `mode` query filter, since every execution will always be `AGENT_SKILL`. *(This is optional — see §6, Decision 2.)*
-- **[src/routes/index.ts](src/routes/index.ts)**: remove the `thresholdRoutes` and `workflowConfigRoutes` registrations.
+- **[src/workflows/routes.ts](../../src/workflows/routes.ts)**: remove the `PATCH .../checkpoints/:checkpoint` route and the `enabled` field from `CheckpointItem`/`WorkflowItem` responses (once `Checkpoint.enabled` is dropped from the schema, see §3.3). Keep the `GET /` and `GET /:workflow` catalog-listing endpoints — they still serve as the workflow/checkpoint reference list.
+- **[src/workflow-executions/](../../src/workflow-executions/)** (`types.ts`, `routes.ts`, `service.ts`): remove the `mode`/`WorkflowMode` field and the `mode` query filter, since every execution will always be `AGENT_SKILL`. *(This is optional — see §6, Decision 2.)*
+- **[src/routes/index.ts](../../src/routes/index.ts)**: remove the `thresholdRoutes` and `workflowConfigRoutes` registrations.
 - **`prisma/seed.ts`**: no structural change needed (it never touched `OrgWorkflowConfig`/overrides), but re-verify after the schema migration that `checkpoints.upsert` still matches the trimmed `Checkpoint` model shape.
 
 ### 3.3 Prisma schema changes ([prisma/schema.prisma](prisma/schema.prisma))

@@ -25,9 +25,11 @@ Before drafting or revising anything for a workflow, always:
    names something else or is ambiguous, ask which of the four they mean.
 2. Grep `prisma/seed.ts` for that workflow's `checkpoints` block to get the
    current canonical list of checkpoint `slug` / `name` / `description`
-   entries — this is the reference catalog shown to the model
-   ("## Checkpoint Catalog" in the prompt) and is the authoritative list of
-   what already has a stable slug.
+   entries. There is no Checkpoint table and no separate catalog section in
+   the prompt: this seed data is only authoring input, woven into the default
+   global instruction text by `buildDefaultInstruction()`. The model only
+   learns about a slug if the active instruction text names it, so every
+   slug you want used must be written out in your draft.
 3. Read the corresponding entry in `DEFAULT_INSTRUCTIONS` inside
    `src/agent-skills/prompt-builder.ts` — this is the hardcoded fallback and
    the best example of the tone, structure, and level of detail expected.

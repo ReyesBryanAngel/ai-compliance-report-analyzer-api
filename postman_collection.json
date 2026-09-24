@@ -1,0 +1,1159 @@
+{
+	"info": {
+		"_postman_id": "b6f2a6b0-4c1a-4e6a-9b8a-ai-compliance-report-analyzer",
+		"name": "AI Compliance Report Analyzer API",
+		"description": "Postman collection for the AI Compliance Report Analyzer API (Fastify v5 + Prisma). Base path for all routes is /api/v1.\n\nAuth: register or login first — the response's `token`/`refreshToken` are auto-captured into collection variables and used as the Bearer token for every subsequent authenticated request.\n\nPublic (no auth required): Health, Auth (register/login/refresh), and Workflows (GET/PATCH). Every other endpoint requires the Bearer token.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3001",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refreshToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "organizationId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "documentId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "batchId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "reportId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "conversationId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "workflow",
+			"value": "kyc",
+			"type": "string"
+		},
+		{
+			"key": "checkpoint",
+			"value": "recurring-salary",
+			"type": "string"
+		},
+		{
+			"key": "instructionId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "workflowExecutionId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "agentExecutionId",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Health check",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"health"
+							]
+						}
+					}
+				},
+				{
+					"name": "Database health check",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/health/db",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"health",
+								"db"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"  const json = pm.response.json();",
+									"  if (json.token) pm.collectionVariables.set('accessToken', json.token);",
+									"  if (json.refreshToken) pm.collectionVariables.set('refreshToken', json.refreshToken);",
+									"  if (json.user) {",
+									"    pm.collectionVariables.set('userId', json.user.id || '');",
+									"    pm.collectionVariables.set('organizationId', json.user.organizationId || '');",
+									"  }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"Jane Doe\",\n  \"organizationName\": \"Acme Bank\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Register a new user. Pass `organizationName` to create a new org, or `organizationId` to join an existing one."
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"  const json = pm.response.json();",
+									"  if (json.token) pm.collectionVariables.set('accessToken', json.token);",
+									"  if (json.refreshToken) pm.collectionVariables.set('refreshToken', json.refreshToken);",
+									"  if (json.user) {",
+									"    pm.collectionVariables.set('userId', json.user.id || '');",
+									"    pm.collectionVariables.set('organizationId', json.user.organizationId || '');",
+									"  }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						}
+					}
+				},
+				{
+					"name": "Refresh token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"  const json = pm.response.json();",
+									"  if (json.token) pm.collectionVariables.set('accessToken', json.token);",
+									"  if (json.refreshToken) pm.collectionVariables.set('refreshToken', json.refreshToken);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auth/refresh",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"refresh"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Organizations",
+			"item": [
+				{
+					"name": "List organizations",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/organizations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get organization by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/organizations/{{organizationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								"{{organizationId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Create organization",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"  const json = pm.response.json();",
+									"  if (json.id) pm.collectionVariables.set('organizationId', json.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Acme Bank\",\n  \"slug\": \"acme-bank\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/organizations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Documents",
+			"item": [
+				{
+					"name": "Upload documents (multipart)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"  const json = pm.response.json();",
+									"  if (json.batch && json.batch.id) pm.collectionVariables.set('batchId', json.batch.id);",
+									"  if (json.documents && json.documents.length) pm.collectionVariables.set('documentId', json.documents[0].id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "batch_name",
+									"value": "January statements",
+									"type": "text",
+									"description": "Optional — must come before file fields to group uploads into a batch"
+								},
+								{
+									"key": "batch_description",
+									"value": "",
+									"type": "text",
+									"description": "Optional"
+								},
+								{
+									"key": "files",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/documents/upload",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents",
+								"upload"
+							]
+						},
+						"description": "Send `batch_name`/`batch_description` as form fields BEFORE the file field(s) to group uploads into a batch."
+					}
+				},
+				{
+					"name": "List documents",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/documents/list?batch_id={{batchId}}&document_id={{documentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents",
+								"list"
+							],
+							"query": [
+								{
+									"key": "batch_id",
+									"value": "{{batchId}}",
+									"disabled": true
+								},
+								{
+									"key": "document_id",
+									"value": "{{documentId}}",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get queue status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/documents/queue/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents",
+								"queue",
+								"status"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get parse status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/documents/{{documentId}}/parse-status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents",
+								"{{documentId}}",
+								"parse-status"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get document by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/documents/{{documentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents",
+								"{{documentId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Stream document file",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/documents/{{documentId}}/file",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents",
+								"{{documentId}}",
+								"file"
+							]
+						}
+					}
+				},
+				{
+					"name": "Request pre-signed upload URLs",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"  const json = pm.response.json();",
+									"  if (json.batch && json.batch.id) pm.collectionVariables.set('batchId', json.batch.id);",
+									"  if (json.documents && json.documents.length) pm.collectionVariables.set('documentId', json.documents[0].document.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"files\": [\n    { \"filename\": \"statement.pdf\" }\n  ],\n  \"batchName\": \"January statements\",\n  \"batchDescription\": \"\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/documents/upload-url",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents",
+								"upload-url"
+							]
+						},
+						"description": "Returns per-file pre-signed S3 PUT URLs (15-minute TTL). Upload directly to S3 with a PUT request using the returned `uploadUrl`, then call the confirm endpoint."
+					}
+				},
+				{
+					"name": "Confirm upload",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/documents/{{documentId}}/confirm",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents",
+								"{{documentId}}",
+								"confirm"
+							]
+						}
+					}
+				},
+				{
+					"name": "Parse document (manual re-parse)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/documents/{{documentId}}/parse",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents",
+								"{{documentId}}",
+								"parse"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Reports",
+			"item": [
+				{
+					"name": "Generate report",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"workflows\": [\"kyc\"],\n  \"document_ids\": [\"{{documentId}}\"],\n  \"batch_id\": \"{{batchId}}\",\n  \"title\": \"Monthly KYC review\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/reports/generate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reports",
+								"generate"
+							]
+						},
+						"description": "Supported workflows: kyc, sg, traml, document-integrity. Provide `document_ids` and/or `batch_id`. Generation runs asynchronously — poll GET /reports/list or GET /reports/:id."
+					}
+				},
+				{
+					"name": "Get report by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/reports/{{reportId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reports",
+								"{{reportId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "List reports",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/reports/list?workflow={{workflow}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reports",
+								"list"
+							],
+							"query": [
+								{
+									"key": "workflow",
+									"value": "{{workflow}}",
+									"disabled": true
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Report Conversations",
+			"item": [
+				{
+					"name": "Start conversation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"  const json = pm.response.json();",
+									"  if (json.id) pm.collectionVariables.set('conversationId', json.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/reports/{{reportId}}/conversations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reports",
+								"{{reportId}}",
+								"conversations"
+							]
+						}
+					}
+				},
+				{
+					"name": "Send message",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"message\": \"Why was the recurring-salary checkpoint flagged as high risk?\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/reports/{{reportId}}/conversations/{{conversationId}}/messages",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reports",
+								"{{reportId}}",
+								"conversations",
+								"{{conversationId}}",
+								"messages"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get conversation history",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/reports/{{reportId}}/conversations/{{conversationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reports",
+								"{{reportId}}",
+								"conversations",
+								"{{conversationId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "List conversations for a report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/reports/{{reportId}}/conversations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reports",
+								"{{reportId}}",
+								"conversations"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Workflows",
+			"item": [
+				{
+					"name": "List workflows",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/workflows",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"workflows"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get workflow by slug",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/workflows/{{workflow}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"workflows",
+								"{{workflow}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "SME Instructions",
+			"item": [
+				{
+					"name": "List instruction versions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/workflows/{{workflow}}/instructions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"workflows",
+								"{{workflow}}",
+								"instructions"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get effective active instruction",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/workflows/{{workflow}}/instructions/active",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"workflows",
+								"{{workflow}}",
+								"instructions",
+								"active"
+							]
+						}
+					}
+				},
+				{
+					"name": "Create instruction draft",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"  const json = pm.response.json();",
+									"  if (json.id) pm.collectionVariables.set('instructionId', json.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Stricter KYC v2\",\n  \"content\": \"Analyze the provided transactions for KYC risk signals...\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/workflows/{{workflow}}/instructions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"workflows",
+								"{{workflow}}",
+								"instructions"
+							]
+						}
+					}
+				},
+				{
+					"name": "Activate instruction version",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/workflows/{{workflow}}/instructions/{{instructionId}}/activate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"workflows",
+								"{{workflow}}",
+								"instructions",
+								"{{instructionId}}",
+								"activate"
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete instruction draft",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/workflows/{{workflow}}/instructions/{{instructionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"workflows",
+								"{{workflow}}",
+								"instructions",
+								"{{instructionId}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Workflow Executions",
+			"item": [
+				{
+					"name": "List executions for a report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/reports/{{reportId}}/workflow-executions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reports",
+								"{{reportId}}",
+								"workflow-executions"
+							]
+						}
+					}
+				},
+				{
+					"name": "List executions (org-wide, filterable)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/workflow-executions?status=&workflowSlug=&mode=&reportId=&from=&to=&cursor=&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"workflow-executions"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "",
+									"disabled": true,
+									"description": "RUNNING | COMPLETED | FAILED"
+								},
+								{
+									"key": "workflowSlug",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "mode",
+									"value": "",
+									"disabled": true,
+									"description": "CHECKPOINTS | AGENT_SKILL"
+								},
+								{
+									"key": "reportId",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "from",
+									"value": "",
+									"disabled": true,
+									"description": "ISO 8601 lower bound on startedAt"
+								},
+								{
+									"key": "to",
+									"value": "",
+									"disabled": true,
+									"description": "ISO 8601 upper bound on startedAt"
+								},
+								{
+									"key": "cursor",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get workflow execution",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/workflow-executions/{{workflowExecutionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"workflow-executions",
+								"{{workflowExecutionId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get workflow execution conversation",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/workflow-executions/{{workflowExecutionId}}/conversation",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"workflow-executions",
+								"{{workflowExecutionId}}",
+								"conversation"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get agent execution",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/agent-executions/{{agentExecutionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"agent-executions",
+								"{{agentExecutionId}}"
+							]
+						}
+					}
+				}
+			]
+		}
+	]
+}

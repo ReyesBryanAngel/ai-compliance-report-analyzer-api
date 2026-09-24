@@ -1,0 +1,582 @@
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.0.0">
+  <diagram id="database-schema" name="Database Schema">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Legend -->
+        <mxCell id="leg0" value="Legend" style="text;html=1;fontStyle=1;fontSize=14;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1" value="Organization / Auth" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="360" y="20" width="240" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg2" value="Document Pipeline" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="620" y="20" width="240" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg3" value="Report &amp; Workflow Config" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="880" y="20" width="240" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg4" value="Agent Execution Audit Trail" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="20" width="240" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg5" value="Report Conversation (chat)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1400" y="20" width="240" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Organization -->
+        <mxCell id="ent_Organization" value="Organization" style="swimlane;html=1;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="220" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Organization_f0" value="PK id : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;fontStyle=4;" vertex="1" parent="ent_Organization">
+          <mxGeometry y="30" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Organization_f1" value="name : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Organization">
+          <mxGeometry y="56" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Organization_f2" value="UQ slug : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Organization">
+          <mxGeometry y="82" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Organization_f3" value="createdAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Organization">
+          <mxGeometry y="108" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Organization_f4" value="updatedAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Organization">
+          <mxGeometry y="134" width="220" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- User -->
+        <mxCell id="ent_User" value="User" style="swimlane;html=1;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="40" y="300" width="220" height="212" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_User_f0" value="PK id : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;fontStyle=4;" vertex="1" parent="ent_User">
+          <mxGeometry y="30" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_User_f1" value="UQ email : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_User">
+          <mxGeometry y="56" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_User_f2" value="name : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_User">
+          <mxGeometry y="82" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_User_f3" value="password : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_User">
+          <mxGeometry y="108" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_User_f4" value="FK organizationId : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_User">
+          <mxGeometry y="134" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_User_f5" value="createdAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_User">
+          <mxGeometry y="160" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_User_f6" value="updatedAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_User">
+          <mxGeometry y="186" width="220" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- RefreshToken -->
+        <mxCell id="ent_RefreshToken" value="RefreshToken" style="swimlane;html=1;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="40" y="572" width="220" height="186" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_RefreshToken_f0" value="PK id : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;fontStyle=4;" vertex="1" parent="ent_RefreshToken">
+          <mxGeometry y="30" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_RefreshToken_f1" value="UQ tokenHash : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_RefreshToken">
+          <mxGeometry y="56" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_RefreshToken_f2" value="FK userId : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_RefreshToken">
+          <mxGeometry y="82" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_RefreshToken_f3" value="expiresAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_RefreshToken">
+          <mxGeometry y="108" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_RefreshToken_f4" value="revokedAt : DateTime?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_RefreshToken">
+          <mxGeometry y="134" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_RefreshToken_f5" value="createdAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_RefreshToken">
+          <mxGeometry y="160" width="220" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- DocumentBatch -->
+        <mxCell id="ent_DocumentBatch" value="DocumentBatch" style="swimlane;html=1;startSize=30;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="360" y="80" width="220" height="134" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_DocumentBatch_f0" value="PK id : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;fontStyle=4;" vertex="1" parent="ent_DocumentBatch">
+          <mxGeometry y="30" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_DocumentBatch_f1" value="name : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_DocumentBatch">
+          <mxGeometry y="56" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_DocumentBatch_f2" value="description : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_DocumentBatch">
+          <mxGeometry y="82" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_DocumentBatch_f3" value="createdAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_DocumentBatch">
+          <mxGeometry y="108" width="220" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- Document -->
+        <mxCell id="ent_Document" value="Document" style="swimlane;html=1;startSize=30;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="360" y="274" width="220" height="368" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Document_f0" value="PK id : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;fontStyle=4;" vertex="1" parent="ent_Document">
+          <mxGeometry y="30" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Document_f1" value="originalName : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Document">
+          <mxGeometry y="56" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Document_f2" value="storedName : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Document">
+          <mxGeometry y="82" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Document_f3" value="mimeType : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Document">
+          <mxGeometry y="108" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Document_f4" value="size : Int" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Document">
+          <mxGeometry y="134" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Document_f5" value="path : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Document">
+          <mxGeometry y="160" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Document_f6" value="status : DocumentStatus" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Document">
+          <mxGeometry y="186" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Document_f7" value="parsedData : Json?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Document">
+          <mxGeometry y="212" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Document_f8" value="FK batchId : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Document">
+          <mxGeometry y="238" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Document_f9" value="FK uploadedById : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Document">
+          <mxGeometry y="264" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Document_f10" value="FK organizationId : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Document">
+          <mxGeometry y="290" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Document_f11" value="createdAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Document">
+          <mxGeometry y="316" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Document_f12" value="updatedAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Document">
+          <mxGeometry y="342" width="220" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- ParseJob -->
+        <mxCell id="ent_ParseJob" value="ParseJob" style="swimlane;html=1;startSize=30;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="360" y="702" width="220" height="264" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ParseJob_f0" value="PK id : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;fontStyle=4;" vertex="1" parent="ent_ParseJob">
+          <mxGeometry y="30" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ParseJob_f1" value="UQ FK documentId : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ParseJob">
+          <mxGeometry y="56" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ParseJob_f2" value="status : ParseJobStatus" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ParseJob">
+          <mxGeometry y="82" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ParseJob_f3" value="attempts : Int" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ParseJob">
+          <mxGeometry y="108" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ParseJob_f4" value="maxAttempts : Int" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ParseJob">
+          <mxGeometry y="134" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ParseJob_f5" value="error : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ParseJob">
+          <mxGeometry y="160" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ParseJob_f6" value="queuedAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ParseJob">
+          <mxGeometry y="186" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ParseJob_f7" value="startedAt : DateTime?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ParseJob">
+          <mxGeometry y="212" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ParseJob_f8" value="completedAt : DateTime?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ParseJob">
+          <mxGeometry y="238" width="220" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- Workflow -->
+        <mxCell id="ent_Workflow" value="Workflow" style="swimlane;html=1;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="680" y="80" width="220" height="212" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Workflow_f0" value="PK id : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;fontStyle=4;" vertex="1" parent="ent_Workflow">
+          <mxGeometry y="30" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Workflow_f1" value="UQ slug : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Workflow">
+          <mxGeometry y="56" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Workflow_f2" value="name : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Workflow">
+          <mxGeometry y="82" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Workflow_f3" value="description : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Workflow">
+          <mxGeometry y="108" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Workflow_f4" value="enabled : Boolean" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Workflow">
+          <mxGeometry y="134" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Workflow_f5" value="createdAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Workflow">
+          <mxGeometry y="160" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Workflow_f6" value="updatedAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Workflow">
+          <mxGeometry y="186" width="220" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- Report -->
+        <mxCell id="ent_Report" value="Report" style="swimlane;html=1;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="680" y="352" width="220" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Report_f0" value="PK id : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;fontStyle=4;" vertex="1" parent="ent_Report">
+          <mxGeometry y="30" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Report_f1" value="title : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Report">
+          <mxGeometry y="56" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Report_f2" value="content : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Report">
+          <mxGeometry y="82" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Report_f3" value="status : ReportStatus" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Report">
+          <mxGeometry y="108" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Report_f4" value="FK userId : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Report">
+          <mxGeometry y="134" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Report_f5" value="FK organizationId : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Report">
+          <mxGeometry y="160" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Report_f6" value="documentIds : String[]" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Report">
+          <mxGeometry y="186" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Report_f7" value="workflows : String[]" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Report">
+          <mxGeometry y="212" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Report_f8" value="createdAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Report">
+          <mxGeometry y="238" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_Report_f9" value="updatedAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_Report">
+          <mxGeometry y="264" width="220" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- ReportJob -->
+        <mxCell id="ent_ReportJob" value="ReportJob" style="swimlane;html=1;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="680" y="702" width="220" height="316" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportJob_f0" value="PK id : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;fontStyle=4;" vertex="1" parent="ent_ReportJob">
+          <mxGeometry y="30" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportJob_f1" value="UQ FK reportId : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportJob">
+          <mxGeometry y="56" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportJob_f2" value="FK documentId : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportJob">
+          <mxGeometry y="82" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportJob_f3" value="workflow : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportJob">
+          <mxGeometry y="108" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportJob_f4" value="status : ReportJobStatus" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportJob">
+          <mxGeometry y="134" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportJob_f5" value="attempts : Int" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportJob">
+          <mxGeometry y="160" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportJob_f6" value="maxAttempts : Int" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportJob">
+          <mxGeometry y="186" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportJob_f7" value="error : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportJob">
+          <mxGeometry y="212" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportJob_f8" value="queuedAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportJob">
+          <mxGeometry y="238" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportJob_f9" value="startedAt : DateTime?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportJob">
+          <mxGeometry y="264" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportJob_f10" value="completedAt : DateTime?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportJob">
+          <mxGeometry y="290" width="220" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- AgentSkillInstruction -->
+        <mxCell id="ent_AgentSkillInstruction" value="AgentSkillInstruction" style="swimlane;html=1;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="680" y="1078" width="220" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentSkillInstruction_f0" value="PK id : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;fontStyle=4;" vertex="1" parent="ent_AgentSkillInstruction">
+          <mxGeometry y="30" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentSkillInstruction_f1" value="FK workflowId : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentSkillInstruction">
+          <mxGeometry y="56" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentSkillInstruction_f2" value="FK organizationId : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentSkillInstruction">
+          <mxGeometry y="82" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentSkillInstruction_f3" value="version : Int" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentSkillInstruction">
+          <mxGeometry y="108" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentSkillInstruction_f4" value="title : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentSkillInstruction">
+          <mxGeometry y="134" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentSkillInstruction_f5" value="content : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentSkillInstruction">
+          <mxGeometry y="160" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentSkillInstruction_f6" value="isActive : Boolean" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentSkillInstruction">
+          <mxGeometry y="186" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentSkillInstruction_f7" value="FK createdById : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentSkillInstruction">
+          <mxGeometry y="212" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentSkillInstruction_f8" value="createdAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentSkillInstruction">
+          <mxGeometry y="238" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentSkillInstruction_f9" value="updatedAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentSkillInstruction">
+          <mxGeometry y="264" width="220" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- ComplianceCheck -->
+        <mxCell id="ent_ComplianceCheck" value="ComplianceCheck" style="swimlane;html=1;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="680" y="1428" width="220" height="186" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ComplianceCheck_f0" value="PK id : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;fontStyle=4;" vertex="1" parent="ent_ComplianceCheck">
+          <mxGeometry y="30" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ComplianceCheck_f1" value="FK reportId : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ComplianceCheck">
+          <mxGeometry y="56" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ComplianceCheck_f2" value="rule : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ComplianceCheck">
+          <mxGeometry y="82" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ComplianceCheck_f3" value="passed : Boolean" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ComplianceCheck">
+          <mxGeometry y="108" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ComplianceCheck_f4" value="details : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ComplianceCheck">
+          <mxGeometry y="134" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ComplianceCheck_f5" value="createdAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ComplianceCheck">
+          <mxGeometry y="160" width="220" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- WorkflowExecution -->
+        <mxCell id="ent_WorkflowExecution" value="WorkflowExecution" style="swimlane;html=1;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="80" width="220" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_WorkflowExecution_f0" value="PK id : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;fontStyle=4;" vertex="1" parent="ent_WorkflowExecution">
+          <mxGeometry y="30" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_WorkflowExecution_f1" value="FK reportId : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_WorkflowExecution">
+          <mxGeometry y="56" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_WorkflowExecution_f2" value="workflowSlug : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_WorkflowExecution">
+          <mxGeometry y="82" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_WorkflowExecution_f3" value="status : ExecutionStatus" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_WorkflowExecution">
+          <mxGeometry y="108" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_WorkflowExecution_f4" value="overallScore : Int?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_WorkflowExecution">
+          <mxGeometry y="134" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_WorkflowExecution_f5" value="error : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_WorkflowExecution">
+          <mxGeometry y="160" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_WorkflowExecution_f6" value="startedAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_WorkflowExecution">
+          <mxGeometry y="186" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_WorkflowExecution_f7" value="completedAt : DateTime?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_WorkflowExecution">
+          <mxGeometry y="212" width="220" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- AgentConversation -->
+        <mxCell id="ent_AgentConversation" value="AgentConversation" style="swimlane;html=1;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="378" width="220" height="108" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentConversation_f0" value="PK id : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;fontStyle=4;" vertex="1" parent="ent_AgentConversation">
+          <mxGeometry y="30" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentConversation_f1" value="UQ FK workflowExecutionId : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentConversation">
+          <mxGeometry y="56" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentConversation_f2" value="createdAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentConversation">
+          <mxGeometry y="82" width="220" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- AgentExecution -->
+        <mxCell id="ent_AgentExecution" value="AgentExecution" style="swimlane;html=1;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="546" width="220" height="368" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentExecution_f0" value="PK id : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;fontStyle=4;" vertex="1" parent="ent_AgentExecution">
+          <mxGeometry y="30" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentExecution_f1" value="FK conversationId : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentExecution">
+          <mxGeometry y="56" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentExecution_f2" value="skillSlug : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentExecution">
+          <mxGeometry y="82" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentExecution_f3" value="provider : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentExecution">
+          <mxGeometry y="108" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentExecution_f4" value="model : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentExecution">
+          <mxGeometry y="134" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentExecution_f5" value="sequence : Int" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentExecution">
+          <mxGeometry y="160" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentExecution_f6" value="status : ExecutionStatus" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentExecution">
+          <mxGeometry y="186" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentExecution_f7" value="promptTokens : Int?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentExecution">
+          <mxGeometry y="212" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentExecution_f8" value="completionTokens : Int?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentExecution">
+          <mxGeometry y="238" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentExecution_f9" value="latencyMs : Int?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentExecution">
+          <mxGeometry y="264" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentExecution_f10" value="error : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentExecution">
+          <mxGeometry y="290" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentExecution_f11" value="startedAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentExecution">
+          <mxGeometry y="316" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentExecution_f12" value="completedAt : DateTime?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentExecution">
+          <mxGeometry y="342" width="220" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- AgentMessage -->
+        <mxCell id="ent_AgentMessage" value="AgentMessage" style="swimlane;html=1;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="974" width="220" height="186" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentMessage_f0" value="PK id : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;fontStyle=4;" vertex="1" parent="ent_AgentMessage">
+          <mxGeometry y="30" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentMessage_f1" value="FK agentExecutionId : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentMessage">
+          <mxGeometry y="56" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentMessage_f2" value="role : AgentMessageRole" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentMessage">
+          <mxGeometry y="82" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentMessage_f3" value="content : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentMessage">
+          <mxGeometry y="108" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentMessage_f4" value="sequence : Int" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentMessage">
+          <mxGeometry y="134" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_AgentMessage_f5" value="createdAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_AgentMessage">
+          <mxGeometry y="160" width="220" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- ReportConversation -->
+        <mxCell id="ent_ReportConversation" value="ReportConversation" style="swimlane;html=1;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="80" width="220" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportConversation_f0" value="PK id : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;fontStyle=4;" vertex="1" parent="ent_ReportConversation">
+          <mxGeometry y="30" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportConversation_f1" value="FK reportId : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportConversation">
+          <mxGeometry y="56" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportConversation_f2" value="FK userId : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportConversation">
+          <mxGeometry y="82" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportConversation_f3" value="createdAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportConversation">
+          <mxGeometry y="108" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportConversation_f4" value="updatedAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportConversation">
+          <mxGeometry y="134" width="220" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- ReportConversationMessage -->
+        <mxCell id="ent_ReportConversationMessage" value="ReportConversationMessage" style="swimlane;html=1;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="300" width="220" height="316" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportConversationMessage_f0" value="PK id : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;fontStyle=4;" vertex="1" parent="ent_ReportConversationMessage">
+          <mxGeometry y="30" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportConversationMessage_f1" value="FK conversationId : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportConversationMessage">
+          <mxGeometry y="56" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportConversationMessage_f2" value="role : ConversationMessageRole" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportConversationMessage">
+          <mxGeometry y="82" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportConversationMessage_f3" value="content : String" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportConversationMessage">
+          <mxGeometry y="108" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportConversationMessage_f4" value="sequence : Int" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportConversationMessage">
+          <mxGeometry y="134" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportConversationMessage_f5" value="model : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportConversationMessage">
+          <mxGeometry y="160" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportConversationMessage_f6" value="provider : String?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportConversationMessage">
+          <mxGeometry y="186" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportConversationMessage_f7" value="promptTokens : Int?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportConversationMessage">
+          <mxGeometry y="212" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportConversationMessage_f8" value="completionTokens : Int?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportConversationMessage">
+          <mxGeometry y="238" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportConversationMessage_f9" value="latencyMs : Int?" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportConversationMessage">
+          <mxGeometry y="264" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_ReportConversationMessage_f10" value="createdAt : DateTime" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;overflow=hidden;fontSize=11;whiteSpace=nowrap;" vertex="1" parent="ent_ReportConversationMessage">
+          <mxGeometry y="290" width="220" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- Relationships -->
+        <mxCell id="edge0" value="organizationId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_Organization" target="ent_User">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge1" value="organizationId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_Organization" target="ent_Report">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge2" value="organizationId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_Organization" target="ent_Document">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge3" value="organizationId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_Organization" target="ent_AgentSkillInstruction">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge4" value="userId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_User" target="ent_Report">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge5" value="uploadedById" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_User" target="ent_Document">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge6" value="userId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_User" target="ent_RefreshToken">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge7" value="createdById" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_User" target="ent_AgentSkillInstruction">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge8" value="userId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_User" target="ent_ReportConversation">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge9" value="batchId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_DocumentBatch" target="ent_Document">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge10" value="documentId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERone;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_Document" target="ent_ParseJob">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge11" value="documentId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_Document" target="ent_ReportJob">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge12" value="workflowId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_Workflow" target="ent_AgentSkillInstruction">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge13" value="reportId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_Report" target="ent_ComplianceCheck">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge14" value="reportId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_Report" target="ent_WorkflowExecution">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge15" value="reportId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_Report" target="ent_ReportConversation">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge16" value="reportId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERone;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_Report" target="ent_ReportJob">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge17" value="workflowExecutionId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERone;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_WorkflowExecution" target="ent_AgentConversation">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge18" value="conversationId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_AgentConversation" target="ent_AgentExecution">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge19" value="agentExecutionId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_AgentExecution" target="ent_AgentMessage">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge20" value="conversationId" style="edgeStyle=entityRelationEdgeStyle;fontSize=9;html=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;" edge="1" parent="1" source="ent_ReportConversation" target="ent_ReportConversationMessage">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

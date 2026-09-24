@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Product Context
+
+This API powers **pds Tech** (https://pds-tech.ai/), a self-serve API for screening iGaming players' financial documents (bank statements, payslips) against 60+ risk indicators, with a "seconds, not minutes" latency promise, full audit trail, and per-page pricing tiers. See [docs/PDS_TECH.md](docs/PDS_TECH.md) for the product's customer-facing promises, how they map to our workflows, and the pricing plans. Check design decisions (parser choice, latency, tenancy, audit) against it.
+
+Known multi-tenant gaps (cross-org data leaks, plan quotas and page billing, queue fairness, multi-server job safety, audit and retention) are tracked as a checklist in [docs/MULTI_TENANT_GAPS.md](docs/MULTI_TENANT_GAPS.md). Check it before working on tenancy, queues, uploads or billing, and tick items off there as they're fixed. The planned move from the app's own JWT auth to Amazon Cognito, including its design decisions (such as a separate `User.cognitoSub`, never used as `User.id`), is in [docs/COGNITO_PLAN.md](docs/COGNITO_PLAN.md).
+
 ## Commands
 
 ```bash
@@ -25,9 +31,30 @@ npm run db:seed           # Seed the database (prisma/seed.ts)
 
 No test runner is configured yet.
 
+Other scripts (run with `node`):
+- `scripts/render-statement-pdf.mjs <input.html> <output.pdf>` — renders HTML to PDF with `puppeteer-core` and a local Chrome/Edge; used by the `bank-statement-generator` agent
+- `scripts/generate-benchmark-samples.mjs` → `scripts/benchmark-upload.mjs` — generate CSV/image samples from `test-data/bank-statements`, then time upload → parse completion per file type and batch size against a running server. PDF/image runs spend real LlamaParse credits and leave documents in S3 and the database; usage is in each script's header
+
+`postman_collection.json` at the repo root covers the API endpoints.
+
+Deployment is currently described only by [render.yaml](render.yaml) (Render.com: `npm install && npm run build`, then `prisma migrate deploy` and `node dist/server.js`). There is no CI pipeline config yet.
+
+## Repository Docs
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) — system overview, module breakdown, data flow, key design decisions
+- [docs/PDS_TECH.md](docs/PDS_TECH.md) — product context and pricing plans
+- [docs/MULTI_TENANT_GAPS.md](docs/MULTI_TENANT_GAPS.md) — tenancy/billing/queue gap checklist
+- [docs/COGNITO_PLAN.md](docs/COGNITO_PLAN.md) — auth migration plan
+- [docs/LLAMAPARSE.md](docs/LLAMAPARSE.md) — parser limits, data residency, pricing
+- [docs/SECURITY.md](docs/SECURITY.md) — security practices (prompt injection, secrets, data privacy)
+- [docs/SECURITY_GAPS.md](docs/SECURITY_GAPS.md) — security gap checklist (LLM injection, output validation, auth, uploads); tick items off as they're fixed
+- [docs/diagrams/](docs/diagrams/) — database schema and user-flow diagrams (draw.io + PNG)
+- [docs/archive/](docs/archive/) — completed plans, kept for history only
+- [.claude/agents/](.claude/agents/) — project subagents: `bank-statement-generator` (synthetic PDF fixtures), `parsed-data-validator` (checks `parsedData` against the source file), `sme-instruction-drafter` (writes SME instruction text)
+
 ## Environment Variables
 
-No `.env.example` is checked in — create a `.env` in the project root with the variables below.
+Copy [.env.example](.env.example) to `.env` in the project root and fill in the variables below.
 
 | Variable | Description |
 |---|---|
@@ -35,14 +62,17 @@ No `.env.example` is checked in — create a `.env` in the project root with the
 | `PORT` | Server port (default `3000`) |
 | `HOST` | Bind address (default `0.0.0.0`) |
 | `DATABASE_URL` | PostgreSQL connection string |
+| `DATABASE_POOL_MAX` | Max `pg` pool connections per process (default `20`, `src/plugins/prisma.ts`) |
 | `CORS_ORIGIN` | Comma-separated list of allowed origins. If unset, CORS allows all origins (`origin: true`) |
 | `JWT_SECRET` | Required. Signs auth access/refresh tokens (`src/plugins/auth.ts`); token expiry is hardcoded to `365d` |
 | `AWS_REGION` | AWS region for the S3 client used for document storage |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | S3 credentials, read by the AWS SDK's default credential chain (not referenced in code). Needed wherever no AWS profile or IAM role is available, e.g. local dev and Render |
 | `S3_BUCKET_NAME` | Required. S3 bucket documents are uploaded to |
 | `S3_KEY_PREFIX` | Key prefix for stored objects (default `documents/`) |
 | `LLAMA_PARSE_API_KEY` | Required for parsing PDF/image statements — LlamaParse is the only PDF/image parser; if unset (or the LlamaParse call fails), those parse jobs fail. CSV parsing does not need it |
 | `ANTHROPIC_API_KEY` | Required for LLM-backed features (report narrative, agent-skill workflows, report chat). Those features degrade/error if unset |
 | `ANTHROPIC_AGENT_SKILL_MODEL` | Model used for agent-skill workflow execution (default `claude-haiku-4-5-20251001`) |
+| `REPORT_QUEUE_CONCURRENCY` | Report jobs claimed per poll per replica (default `3`) |
 | `ANTHROPIC_REPORT_CHAT_MODEL` | Model used for the report-conversation chat feature (default `claude-haiku-4-5-20251001`) |
 
 ## Architecture
@@ -53,7 +83,7 @@ The API is built with **Fastify v5** and **Prisma v7** (PostgreSQL via `pg` + `@
 
 `server.ts` → `buildApp()` (app.ts) → registers plugins in order → mounts routes
 
-Plugin registration order matters: `helmet` → `cors` → `sensible` → `multipart` → custom Prisma plugin (`prismaPlugin`) → parse-queue plugin (`parseQueuePlugin`) → auth plugin (`authPlugin`) → routes.
+Plugin registration order matters: `helmet` → `cors` → `sensible` → `multipart` → custom Prisma plugin (`prismaPlugin`) → parse-queue plugin (`parseQueuePlugin`) → report-queue plugin (`reportQueuePlugin`, decorates `server.reportQueue`) → auth plugin (`authPlugin`) → routes.
 
 ### Multi-Tenancy & Auth
 
@@ -66,7 +96,7 @@ Plugin registration order matters: `helmet` → `cors` → `sensible` → `multi
 1. Client uploads documents (CSV, PDF, or image bank statements) → `POST /api/v1/documents/upload` (direct multipart) or the pre-signed `upload-url` / `confirm` pair — both stream/store the file to S3
 2. Each upload enqueues a `ParseJob`; a background worker (`server.parseQueue`) parses the file asynchronously via the parser factory and writes `Document.parsedData` + sets `Document.status = COMPLETED`
 3. Client requests reports with document IDs and/or a batch ID and workflow names → `POST /api/v1/reports/generate`; the reports service validates the documents are `COMPLETED` with non-null `parsedData`
-4. For each `(document, workflow)` pair (concurrency 3), the workflow runs through the LLM-driven agent-skill pipeline (`src/agent-skills/`) — see "Agent-Skill Workflow" below
+4. Each `(document, workflow)` pair is enqueued as a `ReportJob`; the report queue worker (`server.reportQueue`) claims them and the workflow runs through the LLM-driven agent-skill pipeline (`src/agent-skills/`) — see "Agent-Skill Workflow" below
 5. Findings are persisted as `ComplianceCheck` records; one `Report` record is created per `(document, workflow)` pair and set to `COMPLETED` (or `FAILED` on error)
 6. Clients can then converse with an LLM agent about a completed report via `src/report-conversations/`
 
@@ -106,6 +136,10 @@ Multipart limits (set in `app.ts`): 10 MB per file, 10 files per request.
 - **`image/jpeg`, `image/png`, `image/webp`** — `ImageParser` ([src/parser/image.ts](src/parser/image.ts)). Same LlamaParse-only approach as PDF, with the generic line-based scan as its one fallback interpretation of the markdown.
 
 **LlamaParse integration** ([src/parser/llama-parse.ts](src/parser/llama-parse.ts)) is a hand-rolled `fetch()` client (no SDK) against `https://api.cloud.llamaindex.ai/api/parsing`: upload → poll job status (3s interval, up to ~60s) → fetch markdown result → parse markdown tables into transactions, using balance deltas to correct debit/credit misclassification. A `Semaphore` caps concurrent LlamaParse calls to **20** (the plan's rate limit) — this is what the parse queue's `BATCH_SIZE = 20` is tuned to match. Returns `null` if `LLAMA_PARSE_API_KEY` is unset, the job fails, or a network error occurs — `PdfParser`/`ImageParser` treat that as a hard failure and throw, since there is no local fallback.
+
+LlamaParse's own supported formats, rate limits, service limitations, and credit pricing (plus cost estimates per product plan tier) are documented in [docs/LLAMAPARSE.md](docs/LLAMAPARSE.md) — consult it before changing the parse mode, concurrency, polling timeout, or adding parsers for new MIME types.
+
+**Data residency:** `BASE_URL` in `llama-parse.ts` is hardcoded to the North America endpoint (`api.cloud.llamaindex.ai`, AWS `us-east-1`), so UK player documents are currently processed in the US. LlamaParse also offers an EU region (`api.cloud.eu.llamaindex.ai`, Frankfurt; needs a separate EU org and API key — orgs can't migrate regions) and single-tenant/BYOC/self-hosted deployments, which the Major Player tier's "dedicated VPC & tenancy isolation" promise likely requires. See "Data Handling & Deployment" in [docs/LLAMAPARSE.md](docs/LLAMAPARSE.md) before changing the endpoint or adding per-tenant parser config.
 
 `ALLOWED_MIME_TYPES` (upload validation, [src/documents/types.ts](src/documents/types.ts)) is broader than `PARSEABLE_MIME_TYPES` — `.xls`/`.xlsx`/`.docx` can be uploaded and stored but have no parser yet.
 
@@ -170,7 +204,8 @@ This is distinct from the user-facing report chat below — `AgentMessage` is th
 
 - Validates `workflows` against `SUPPORTED_WORKFLOWS` before doing any work
 - Accepts `document_ids`, `batch_id`, or both (set union); documents must have `status === 'COMPLETED'` and non-null `parsedData`
-- Creates a `Report` row per `(document, workflow)` pair up front (`status: GENERATING`) so the client has something to poll for immediately, then processes the actual analysis in the background (fire-and-forget, worker pool of concurrency 3) since agent-skill LLM calls can exceed a typical proxy's request timeout
+- Creates a `Report` row per `(document, workflow)` pair up front (`status: GENERATING`) so the client has something to poll for immediately, then enqueues a durable `ReportJob` per pair, since agent-skill LLM calls can exceed a typical proxy's request timeout
+- [src/reports/report-queue.ts](src/reports/report-queue.ts) is a Postgres-backed queue mirroring the parse queue (`SELECT ... FOR UPDATE SKIP LOCKED`, 5s poll, batch size `REPORT_QUEUE_CONCURRENCY` default 3, retries up to `maxAttempts`, crash recovery on start). Jobs are claimed **round-robin across tenants**, not strictly FIFO: each tenant's oldest queued job ranks first, so one org's large backlog can't starve another org's job. Tenant = `Report.organizationId`, falling back to `userId` for org-less users
 - Sets `Report.status = COMPLETED` on success, `FAILED` on any thrown error
 - Stores workflow results and a `ReportSummary` as JSON inside `Report.content`
 - Each `RiskFinding` is also persisted as a `ComplianceCheck` row (rule = checkpoint name, passed = `!triggered`, details = JSON)
@@ -185,6 +220,7 @@ This is distinct from the user-facing report chat below — `AgentMessage` is th
 | `DocumentBatch` | Named group of `Document`s, referenceable by `batch_id` in report generation |
 | `Document` | Uploaded file metadata; `status`: `PROCESSING` → `COMPLETED`/`FAILED`; `parsedData: Json?` holds the normalized transactions; 1:1 with `ParseJob` |
 | `ParseJob` | Backs the parse queue; `status`: `QUEUED` → `PROCESSING` → `COMPLETED`/`FAILED`; tracks `attempts`/`maxAttempts` |
+| `ReportJob` | Backs the report queue; 1:1 with a `Report` (`reportId` unique), plus `documentId`/`workflow`; `status`: `QUEUED` → `PROCESSING` → `COMPLETED`/`FAILED`; tracks `attempts`/`maxAttempts` |
 | `Workflow` | Catalog of workflows (`kyc`, `sg`, `traml`, `document-integrity`); slug/name/description/enabled only — no per-checkpoint sub-catalog |
 | `AgentSkillInstruction` | Versioned SME-authored instruction text fed into agent-skill prompts, optionally org-scoped, with an active/inactive flag |
 | `Report` | Compliance report for one `(document, workflow)` pair; `status`: `GENERATING` → `COMPLETED`/`FAILED`; JSON `content` holds results + summary |
@@ -196,7 +232,7 @@ This is distinct from the user-facing report chat below — `AgentMessage` is th
 | `ReportConversation` | A user-facing chat thread about a completed `Report` |
 | `ReportConversationMessage` | One USER/ASSISTANT message in a report conversation |
 
-All primary keys are UUIDs. Notable cascades: `Report` → `ComplianceCheck`, `WorkflowExecution`, `ReportConversation` (cascade); `User` → `Report` (`SetNull`); `AgentConversation` → `AgentExecution` → `AgentMessage` (cascade).
+All primary keys are UUIDs. Notable cascades: `Report` → `ComplianceCheck`, `WorkflowExecution`, `ReportConversation`, `ReportJob` (cascade); `Document` → `ReportJob` (cascade); `User` → `Report` (`SetNull`); `AgentConversation` → `AgentExecution` → `AgentMessage` (cascade).
 
 ### Logging
 

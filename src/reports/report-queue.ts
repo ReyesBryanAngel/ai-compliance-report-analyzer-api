@@ -82,15 +82,33 @@ export class ReportQueueWorker {
 
   // Atomically claims a batch of QUEUED jobs using SELECT FOR UPDATE SKIP LOCKED
   // so concurrent replicas never double-process the same job.
+  //
+  // Jobs are claimed round-robin across tenants rather than strictly FIFO: each tenant's
+  // oldest job ranks 1, its second-oldest ranks 2, and so on, so one tenant's large backlog
+  // can't starve another tenant's single job. A tenant is the report's organization, falling
+  // back to its user (then the report itself) so org-less users aren't lumped into one bucket.
   private async claimJobs(prisma: PrismaClient): Promise<ReportJobRow[]> {
     return prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<ReportJobRow[]>`
-        SELECT id, "reportId", "documentId", workflow, attempts, "maxAttempts"
-        FROM report_jobs
-        WHERE status = 'QUEUED'
-        ORDER BY "queuedAt" ASC
+        WITH ranked AS (
+          SELECT
+            j.id,
+            j."queuedAt",
+            ROW_NUMBER() OVER (
+              PARTITION BY COALESCE(r."organizationId", r."userId", r.id)
+              ORDER BY j."queuedAt" ASC
+            ) AS tenant_rank
+          FROM report_jobs j
+          JOIN reports r ON r.id = j."reportId"
+          WHERE j.status = 'QUEUED'
+        )
+        SELECT j.id, j."reportId", j."documentId", j.workflow, j.attempts, j."maxAttempts"
+        FROM report_jobs j
+        JOIN ranked ON ranked.id = j.id
+        WHERE j.status = 'QUEUED'
+        ORDER BY ranked.tenant_rank ASC, ranked."queuedAt" ASC
         LIMIT ${BATCH_SIZE}
-        FOR UPDATE SKIP LOCKED
+        FOR UPDATE OF j SKIP LOCKED
       `;
 
       if (rows.length === 0) return [];
